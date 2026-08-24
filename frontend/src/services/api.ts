@@ -65,4 +65,28 @@ export const apiService = {
     }
     return [];
   },
+
+  async placeOrder(
+    symbol: string,
+    side: 'BUY' | 'SELL',
+    amountUsd: number,
+    orderType: 'MARKET' | 'LIMIT' = 'MARKET'
+  ): Promise<{ success: boolean; message: string; orderId?: string }> {
+    try {
+      const response = await fetch(`${APP_CONFIG.REST_API_URL}/portfolio/order`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ symbol, side, amountUsd, orderType }),
+      });
+
+      const data = await response.json();
+      if (response.ok && data.success) {
+        return { success: true, message: data.message || 'Order placed successfully', orderId: data.orderId };
+      }
+      return { success: false, message: data.message || data.error || 'Order execution failed' };
+    } catch (err: any) {
+      console.error('[API] Error placing order:', err);
+      return { success: false, message: err.message || 'Network error' };
+    }
+  },
 };

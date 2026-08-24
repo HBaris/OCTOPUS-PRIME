@@ -11,17 +11,35 @@ export class BootScene extends Phaser.Scene {
   }
 
   private createProceduralTextures(): void {
-    // 1. Floor Tile (32x32 retro checkered office carpet/tile)
+    // 1. Floor Tile (32x32 retro textured office carpet/tile with pixel dithering)
     const floorCanvas = this.textures.createCanvas('floor_tile', 32, 32);
     if (floorCanvas) {
       const ctx = floorCanvas.getContext();
-      ctx.fillStyle = '#1e293b';
+      // Base dark slate carpet
+      ctx.fillStyle = '#182234';
       ctx.fillRect(0, 0, 32, 32);
-      ctx.fillStyle = '#0f172a';
+      
+      // Checkered sub-tiles
+      ctx.fillStyle = '#111927';
       ctx.fillRect(0, 0, 16, 16);
       ctx.fillRect(16, 16, 16, 16);
-      // Subtle grid border
-      ctx.strokeStyle = '#334155';
+
+      // Subtle pixel texture dithering
+      ctx.fillStyle = '#202d42';
+      for (let x = 2; x < 32; x += 4) {
+        for (let y = 2; y < 32; y += 4) {
+          ctx.fillRect(x, y, 1, 1);
+        }
+      }
+      ctx.fillStyle = '#0d131f';
+      for (let x = 4; x < 32; x += 4) {
+        for (let y = 4; y < 32; y += 4) {
+          ctx.fillRect(x, y, 1, 1);
+        }
+      }
+
+      // Tile Borders
+      ctx.strokeStyle = '#28364f';
       ctx.lineWidth = 1;
       ctx.strokeRect(0, 0, 32, 32);
       floorCanvas.refresh();
@@ -41,7 +59,7 @@ export class BootScene extends Phaser.Scene {
       wallCanvas.refresh();
     }
 
-    // 3. Desk (96x48 wooden / metallic workstation)
+    // 3. Desk (96x48 wooden / metallic workstation with bevel highlights)
     const deskCanvas = this.textures.createCanvas('desk_texture', 96, 48);
     if (deskCanvas) {
       const ctx = deskCanvas.getContext();
@@ -50,16 +68,32 @@ export class BootScene extends Phaser.Scene {
       ctx.fillRect(0, 0, 96, 36);
       ctx.fillStyle = '#475569';
       ctx.fillRect(4, 4, 88, 28);
-      // Desk Front Border
+      // Desk Top Highlight
+      ctx.fillStyle = '#64748b';
+      ctx.fillRect(4, 4, 88, 2);
+      // Desk Front Border & Shadow
       ctx.fillStyle = '#1e293b';
       ctx.fillRect(0, 36, 96, 12);
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(0, 46, 96, 2);
       // Keyboard Mat
       ctx.fillStyle = '#0f172a';
       ctx.fillRect(28, 14, 40, 14);
       deskCanvas.refresh();
     }
 
-    // 4. Computer Monitor (36x32)
+    // 4. Desk Drop Shadow (100x18)
+    const shadowCanvas = this.textures.createCanvas('desk_shadow', 100, 18);
+    if (shadowCanvas) {
+      const ctx = shadowCanvas.getContext();
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+      ctx.beginPath();
+      ctx.ellipse(50, 9, 48, 8, 0, 0, Math.PI * 2);
+      ctx.fill();
+      shadowCanvas.refresh();
+    }
+
+    // 5. Computer Monitor (36x32)
     const monitorCanvas = this.textures.createCanvas('monitor_texture', 36, 32);
     if (monitorCanvas) {
       const ctx = monitorCanvas.getContext();
@@ -81,7 +115,7 @@ export class BootScene extends Phaser.Scene {
       monitorCanvas.refresh();
     }
 
-    // 5. Office Chair (32x32)
+    // 6. Office Chair (32x32)
     const chairCanvas = this.textures.createCanvas('chair_texture', 32, 32);
     if (chairCanvas) {
       const ctx = chairCanvas.getContext();
@@ -96,7 +130,7 @@ export class BootScene extends Phaser.Scene {
       chairCanvas.refresh();
     }
 
-    // 6. Server Rack (40x80)
+    // 7. Server Rack (40x80)
     const serverCanvas = this.textures.createCanvas('server_rack', 40, 80);
     if (serverCanvas) {
       const ctx = serverCanvas.getContext();
@@ -118,7 +152,7 @@ export class BootScene extends Phaser.Scene {
       serverCanvas.refresh();
     }
 
-    // 7. Plant Pot (24x32)
+    // 8. Plant Pot (24x32)
     const plantCanvas = this.textures.createCanvas('plant_texture', 24, 32);
     if (plantCanvas) {
       const ctx = plantCanvas.getContext();
@@ -139,7 +173,7 @@ export class BootScene extends Phaser.Scene {
       plantCanvas.refresh();
     }
 
-    // 8. Water Cooler (24x48)
+    // 9. Water Cooler (24x48)
     const coolerCanvas = this.textures.createCanvas('cooler_texture', 24, 48);
     if (coolerCanvas) {
       const ctx = coolerCanvas.getContext();
@@ -158,7 +192,7 @@ export class BootScene extends Phaser.Scene {
       coolerCanvas.refresh();
     }
 
-    // 9. Alert Bubble (32x32)
+    // 10. Alert Bubble (32x32)
     const alertCanvas = this.textures.createCanvas('alert_bubble', 32, 32);
     if (alertCanvas) {
       const ctx = alertCanvas.getContext();
@@ -174,7 +208,7 @@ export class BootScene extends Phaser.Scene {
       alertCanvas.refresh();
     }
 
-    // 10. Trading Indicator Icon (28x28)
+    // 11. Trading Indicator Icon (28x28)
     const tradeCanvas = this.textures.createCanvas('trading_badge', 28, 28);
     if (tradeCanvas) {
       const ctx = tradeCanvas.getContext();
@@ -190,7 +224,7 @@ export class BootScene extends Phaser.Scene {
       tradeCanvas.refresh();
     }
 
-    // 11. Warning Badge 🛑 (32x32)
+    // 12. Warning Badge 🛑 (32x32)
     const stopCanvas = this.textures.createCanvas('warning_stop', 32, 32);
     if (stopCanvas) {
       const ctx = stopCanvas.getContext();

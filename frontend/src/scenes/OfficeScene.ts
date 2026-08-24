@@ -15,6 +15,17 @@ import {
 } from '../types/events.ts';
 import { wsService } from '../services/websocket.ts';
 import { apiService } from '../services/api.ts';
+import { formatSignalDialogue } from '../utils/signalDialogue.ts';
+
+interface TradeProposalPayload {
+  proposalId: string;
+  symbol: string;
+  side: 'BUY' | 'SELL';
+  suggestedAmountUsd: number;
+  signalScore: number;
+  reasoning: string;
+  timestamp: string;
+}
 
 interface AgentEntity {
   config: AgentVisualConfig;
@@ -43,10 +54,6 @@ export class OfficeScene extends Phaser.Scene {
   private currentSeverity: SceneSeverity = 'HAFİF';
   private severityTween: Phaser.Tweens.Tween | null = null;
 
-  public getCurrentSeverity(): SceneSeverity {
-    return this.currentSeverity;
-  }
-
   // HUD Elements
   private statusBadgeText!: Phaser.GameObjects.Text;
   private statusDot!: Phaser.GameObjects.Arc;
@@ -59,8 +66,23 @@ export class OfficeScene extends Phaser.Scene {
   private bannerContainer!: Phaser.GameObjects.Container;
   private bannerText!: Phaser.GameObjects.Text;
 
+  // Trade Proposal Approval Banner
+  private proposalContainer!: Phaser.GameObjects.Container;
+  private proposalText!: Phaser.GameObjects.Text;
+  private proposalTimerText!: Phaser.GameObjects.Text;
+  private proposalExpiryTimer: Phaser.Time.TimerEvent | null = null;
+  private currentProposal: TradeProposalPayload | null = null;
+
+  // Sinyal Avcısı (Ali) Speech Queue
+  private aliDialogueQueue: string[] = [];
+  private isAliSpeaking = false;
+
   constructor() {
     super({ key: 'OfficeScene' });
+  }
+
+  public getCurrentSeverity(): SceneSeverity {
+    return this.currentSeverity;
   }
 
   create(): void {
@@ -69,6 +91,7 @@ export class OfficeScene extends Phaser.Scene {
     this.createAtmosphereOverlay();
     this.createHUD();
     this.createBarisButton();
+    this.createTradeProposalBanner();
     this.createNotificationBanner();
     this.createEventTicker();
 
@@ -82,14 +105,14 @@ export class OfficeScene extends Phaser.Scene {
   private createOfficeEnvironment(): void {
     const { GAME_WIDTH, GAME_HEIGHT } = APP_CONFIG;
 
-    // Background Wall (Top 120px)
+    // Background Wall (Top 128px)
     for (let x = 0; x < GAME_WIDTH; x += 32) {
       for (let y = 0; y < 128; y += 32) {
         this.add.image(x + 16, y + 16, 'wall_tile');
       }
     }
 
-    // Floor (From y=128 down)
+    // Textured Floor (From y=128 down)
     for (let x = 0; x < GAME_WIDTH; x += 32) {
       for (let y = 128; y < GAME_HEIGHT; y += 32) {
         this.add.image(x + 16, y + 16, 'floor_tile');
@@ -98,7 +121,7 @@ export class OfficeScene extends Phaser.Scene {
 
     // Wall Divider Line
     const divider = this.add.graphics();
-    divider.lineStyle(4, 0x475569);
+    divider.lineStyle(4, 0x334155);
     divider.lineBetween(0, 128, GAME_WIDTH, 128);
 
     // Wall Clock
@@ -119,12 +142,9 @@ export class OfficeScene extends Phaser.Scene {
     });
 
     // Office Decorations
-    // Server Rack Left
     this.add.image(40, 75, 'server_rack');
-    // Plant Pots
     this.add.image(920, 110, 'plant_texture');
     this.add.image(40, 540, 'plant_texture');
-    // Water Cooler Right
     this.add.image(915, 520, 'cooler_texture');
 
     // Office Signboard
@@ -142,13 +162,16 @@ export class OfficeScene extends Phaser.Scene {
   // ==========================================
   private createDesksAndAgents(): void {
     AGENT_CONFIGS.forEach((config) => {
-      // 1. Chair
+      // 1. Desk Drop Shadow
+      this.add.image(config.x, config.y + 40, 'desk_shadow');
+
+      // 2. Chair
       this.add.image(config.x, config.y - 12, 'chair_texture');
 
-      // 2. Desk
+      // 3. Desk
       const desk = this.add.image(config.x, config.y + 20, 'desk_texture');
 
-      // 3. Monitor
+      // 4. Monitor
       const monitor = this.add.image(config.x, config.y + 12, 'monitor_texture');
 
       // Monitor Screen Pulsing Animation
@@ -160,7 +183,7 @@ export class OfficeScene extends Phaser.Scene {
         repeat: -1,
       });
 
-      // 4. Agent Character Container
+      // 5. Agent Character Container
       const agentContainer = this.add.container(config.x, config.y - 16);
 
       // Agent Body (Pixel shape)
@@ -195,16 +218,16 @@ export class OfficeScene extends Phaser.Scene {
         color: '#10b981',
       }).setOrigin(0.5);
 
-      // Speech / Thought Bubble
-      const bubbleContainer = this.add.container(0, -56);
+      // Speech / Thought Bubble (Wider and styled for dialogue)
+      const bubbleContainer = this.add.container(0, -64);
       const bubbleBg = this.add.graphics();
-      this.drawBubble(bubbleBg, 120, 28);
+      this.drawBubble(bubbleBg, 150, 36);
       const bubbleText = this.add.text(0, -4, 'Hazırda bekliyor', {
         fontFamily: 'monospace',
         fontSize: '8px',
         color: '#0f172a',
         align: 'center',
-        wordWrap: { width: 110 },
+        wordWrap: { width: 140 },
       }).setOrigin(0.5);
       bubbleContainer.add([bubbleBg, bubbleText]);
       bubbleContainer.setVisible(false);
@@ -237,11 +260,11 @@ export class OfficeScene extends Phaser.Scene {
 
       agentContainer.add([body, head, hair, emojiBadge, roleTagBg, roleText, stateText, alertIcon, tradeIcon, warningBadge, bubbleContainer]);
 
-      // Idle Breathing Animation
+      // Idle Breathing Animation (1-2px smooth vertical sine wave)
       this.tweens.add({
         targets: [head, hair, emojiBadge],
         y: '-=2',
-        duration: 900 + Math.random() * 400,
+        duration: 1000 + Math.random() * 300,
         yoyo: true,
         repeat: -1,
         ease: 'Sine.easeInOut',
@@ -263,7 +286,7 @@ export class OfficeScene extends Phaser.Scene {
         confidenceBadge.add([cBg, confidenceText]);
       }
 
-      // Interactive Click on Agent to view details
+      // Interactive Click on Agent
       desk.setInteractive({ useHandCursor: true }).on('pointerdown', () => {
         this.showAgentDetails(config.role);
       });
@@ -323,7 +346,6 @@ export class OfficeScene extends Phaser.Scene {
       this.severityTween = null;
     }
 
-    // Smooth transition
     this.tweens.add({
       targets: this.severityOverlay,
       fillColor: config.tint,
@@ -337,7 +359,6 @@ export class OfficeScene extends Phaser.Scene {
       this.severityText.setColor(severity === 'KATASTROFİK' || severity === 'ÇOK AĞIR' ? '#ef4444' : '#10b981');
     }
 
-    // Emergency Pulsing in KATASTROFIK mode
     if (severity === 'KATASTROFİK') {
       this.severityTween = this.tweens.add({
         targets: this.severityOverlay,
@@ -355,12 +376,10 @@ export class OfficeScene extends Phaser.Scene {
   private createHUD(): void {
     const { GAME_WIDTH } = APP_CONFIG;
 
-    // HUD Background Bar
     const hudBar = this.add.rectangle(GAME_WIDTH / 2, 22, GAME_WIDTH - 24, 34, 0x0f172a, 0.95);
     hudBar.setStrokeStyle(2, 0x1e293b);
     hudBar.setDepth(20);
 
-    // 1. Connection Status
     this.statusDot = this.add.circle(32, 22, 5, 0xef4444).setDepth(21);
     this.statusBadgeText = this.add.text(44, 22, 'OFFLINE', {
       fontFamily: 'monospace',
@@ -368,7 +387,6 @@ export class OfficeScene extends Phaser.Scene {
       color: '#94a3b8',
     }).setOrigin(0, 0.5).setDepth(21);
 
-    // 2. Portfolio Balance & Positions
     this.balanceText = this.add.text(180, 22, '💰 BAKIYE: $10,000.00', {
       fontFamily: 'monospace',
       fontSize: '9px',
@@ -381,7 +399,6 @@ export class OfficeScene extends Phaser.Scene {
       color: '#38bdf8',
     }).setOrigin(0, 0.5).setDepth(21);
 
-    // 3. Severity Badge
     this.severityText = this.add.text(GAME_WIDTH - 30, 22, 'ORTAM: HAFİF', {
       fontFamily: 'monospace',
       fontSize: '9px',
@@ -428,16 +445,11 @@ export class OfficeScene extends Phaser.Scene {
   }
 
   private async triggerBarisGreeting(): Promise<void> {
-    console.log('[Barış Geldi] Button clicked! Greeting all agents...');
-
-    // 1. Show Screen-wide Dialog Banner
     this.showBanner('👋 BARIŞ GELDİ, KAPTAN! TÜM EKİP HAZIRDA! 🚀');
 
-    // 2. Trigger All Agents Salute / Celebration
     this.agents.forEach((agent) => {
       this.setAgentState(agent.config.role, 'SALUTING', 'Hoş geldin Kaptan Barış!');
 
-      // Jump animation
       this.tweens.add({
         targets: agent.container,
         y: agent.config.y - 32,
@@ -448,11 +460,8 @@ export class OfficeScene extends Phaser.Scene {
       });
     });
 
-    // 3. Call REST API /api/signals/trigger (Stub/Mock)
-    const result = await apiService.triggerSignals();
-    console.log('[Barış Geldi API Result]:', result);
+    await apiService.triggerSignals();
 
-    // Reset back to IDLE after 4 seconds
     this.time.delayedCall(4000, () => {
       this.agents.forEach((agent) => {
         if (agent.currentState === 'SALUTING') {
@@ -463,18 +472,146 @@ export class OfficeScene extends Phaser.Scene {
   }
 
   // ==========================================
-  // 6. NOTIFICATION BANNER & TICKER
+  // 6. MANUEL TRADE PROPOSAL APPROVAL BANNER
+  // ==========================================
+  private createTradeProposalBanner(): void {
+    const { GAME_WIDTH } = APP_CONFIG;
+
+    this.proposalContainer = this.add.container(GAME_WIDTH / 2, 70).setDepth(35);
+    const bg = this.add.rectangle(0, 0, 580, 36, 0x0f172a, 0.98);
+    bg.setStrokeStyle(2, 0xf59e0b);
+
+    this.proposalText = this.add.text(-120, 0, '', {
+      fontFamily: 'monospace',
+      fontSize: '9px',
+      color: '#fbbf24',
+    }).setOrigin(0.5);
+
+    this.proposalTimerText = this.add.text(80, 0, '(30s)', {
+      fontFamily: 'monospace',
+      fontSize: '8px',
+      color: '#94a3b8',
+    }).setOrigin(0.5);
+
+    // Onayla Button (Green)
+    const approveBtn = this.add.rectangle(170, 0, 90, 22, 0x10b981, 1);
+    approveBtn.setStrokeStyle(1, 0x34d399);
+    approveBtn.setInteractive({ useHandCursor: true });
+    const approveText = this.add.text(170, 0, 'ONAYLA ✅', {
+      fontFamily: 'monospace',
+      fontSize: '8px',
+      color: '#ffffff',
+    }).setOrigin(0.5);
+
+    approveBtn.on('pointerdown', async () => {
+      if (this.currentProposal) {
+        approveBtn.setFillStyle(0x059669);
+        await this.executeManualProposal(this.currentProposal);
+      }
+    });
+
+    // Reddet / Kapat Button
+    const dismissBtn = this.add.rectangle(240, 0, 24, 22, 0xef4444, 1);
+    dismissBtn.setStrokeStyle(1, 0xf87171);
+    dismissBtn.setInteractive({ useHandCursor: true });
+    const dismissText = this.add.text(240, 0, '✕', {
+      fontFamily: 'monospace',
+      fontSize: '9px',
+      color: '#ffffff',
+    }).setOrigin(0.5);
+
+    dismissBtn.on('pointerdown', () => {
+      this.dismissProposal('İşlem önerisi kullanıcı tarafından reddedildi.');
+    });
+
+    this.proposalContainer.add([bg, this.proposalText, this.proposalTimerText, approveBtn, approveText, dismissBtn, dismissText]);
+    this.proposalContainer.setVisible(false);
+  }
+
+  public showTradeProposal(proposal: TradeProposalPayload): void {
+    this.currentProposal = proposal;
+    this.proposalText.setText(`⚡ ÖNERİ: ${proposal.side} ${proposal.symbol} ($${proposal.suggestedAmountUsd})`);
+    this.proposalContainer.setVisible(true);
+    this.proposalContainer.setAlpha(0);
+
+    this.tweens.add({
+      targets: this.proposalContainer,
+      alpha: 1,
+      duration: 250,
+    });
+
+    // 30 seconds countdown
+    let remaining = 30;
+    this.proposalTimerText.setText(`(${remaining}s)`);
+
+    if (this.proposalExpiryTimer) {
+      this.proposalExpiryTimer.remove();
+    }
+
+    this.proposalExpiryTimer = this.time.addEvent({
+      delay: 1000,
+      repeat: 30,
+      callback: () => {
+        remaining--;
+        if (remaining > 0) {
+          this.proposalTimerText.setText(`(${remaining}s)`);
+        } else {
+          this.dismissProposal('İşlem önerisinin 30 saniyelik süresi doldu.');
+        }
+      },
+    });
+  }
+
+  private async executeManualProposal(proposal: TradeProposalPayload): Promise<void> {
+    const result = await apiService.placeOrder(
+      proposal.symbol,
+      proposal.side,
+      proposal.suggestedAmountUsd,
+      'MARKET'
+    );
+
+    if (result.success) {
+      this.showBanner(`✅ Emir Testnet'e İletildi: ${proposal.side} ${proposal.symbol} ($${proposal.suggestedAmountUsd})`);
+    } else {
+      this.showBanner(`❌ Emir İletilemedi: ${result.message}`);
+    }
+
+    this.dismissProposal();
+  }
+
+  private dismissProposal(reason?: string): void {
+    if (this.proposalExpiryTimer) {
+      this.proposalExpiryTimer.remove();
+      this.proposalExpiryTimer = null;
+    }
+    this.currentProposal = null;
+
+    this.tweens.add({
+      targets: this.proposalContainer,
+      alpha: 0,
+      duration: 300,
+      onComplete: () => {
+        this.proposalContainer.setVisible(false);
+        if (reason) {
+          this.updateTicker(reason);
+        }
+      },
+    });
+  }
+
+  // ==========================================
+  // 7. NOTIFICATION BANNER & TICKER
   // ==========================================
   private createNotificationBanner(): void {
     const { GAME_WIDTH } = APP_CONFIG;
 
-    this.bannerContainer = this.add.container(GAME_WIDTH / 2, 70).setDepth(30);
-    const bg = this.add.rectangle(0, 0, 520, 28, 0x1e293b, 0.95);
+    this.bannerContainer = this.add.container(GAME_WIDTH / 2, 110).setDepth(30);
+    const bg = this.add.rectangle(0, 0, 540, 28, 0x1e293b, 0.95);
     bg.setStrokeStyle(2, 0x38bdf8);
 
     this.bannerText = this.add.text(0, 0, '', {
       fontFamily: 'monospace',
-      fontSize: '10px',
+      fontSize: '9px',
       color: '#38bdf8',
     }).setOrigin(0.5);
 
@@ -532,10 +669,9 @@ export class OfficeScene extends Phaser.Scene {
   }
 
   // ==========================================
-  // 7. WEBSOCKET EVENT HANDLERS
+  // 8. WEBSOCKET EVENT HANDLERS
   // ==========================================
   private initWebSocketListeners(): void {
-    // 1. Connection Status updates
     wsService.onStatusChange((status) => {
       if (this.statusBadgeText && this.statusDot) {
         if (status === 'CONNECTED') {
@@ -554,7 +690,6 @@ export class OfficeScene extends Phaser.Scene {
       }
     });
 
-    // 2. AGENT_ACTION Event
     wsService.on<AgentActionPayload>('AGENT_ACTION', (payload) => {
       const stateMap: Record<string, AgentState> = {
         STARTED: 'ANALYZING',
@@ -567,20 +702,17 @@ export class OfficeScene extends Phaser.Scene {
       this.setAgentState(payload.agentRole, newState, payload.details);
     });
 
-    // 3. SCENE_SEVERITY_UPDATE Event
     wsService.on<SceneSeverityPayload>('SCENE_SEVERITY_UPDATE', (payload) => {
       this.updateSceneSeverity(payload.severityLabel);
       this.updateTicker(`[${payload.severityLabel}] ${payload.primaryReason}`);
     });
 
-    // 4. RISK_CONFIDENCE_UPDATE Event
     wsService.on<RiskConfidencePayload>('RISK_CONFIDENCE_UPDATE', (payload) => {
       const riskAgent = this.agents.get('Risk Analisti');
       if (riskAgent && riskAgent.confidenceText) {
         const percent = Math.round(payload.confidenceScore * 100);
         riskAgent.confidenceText.setText(`%${percent}`);
         
-        // Color coding confidence
         if (percent >= 80) riskAgent.confidenceText.setColor('#10b981');
         else if (percent >= 60) riskAgent.confidenceText.setColor('#facc15');
         else riskAgent.confidenceText.setColor('#ef4444');
@@ -588,21 +720,18 @@ export class OfficeScene extends Phaser.Scene {
       this.updateTicker(`🛡️ Risk Analisti Güven Güncellemesi: %${Math.round(payload.confidenceScore * 100)}`);
     });
 
-    // 5. SPENDING_LIMIT_WARNING Event
     wsService.on<SpendingLimitWarningPayload>('SPENDING_LIMIT_WARNING', (payload) => {
       const traderAgent = this.agents.get('Binance İşlemci');
       if (traderAgent) {
         traderAgent.warningBadge.setVisible(true);
         this.showBanner(`🛑 LİMİT UYARISI: ${payload.symbol} $${payload.attemptedSizeUsd} engellendi!`);
 
-        // Hide badge after 3.5 seconds
         this.time.delayedCall(3500, () => {
           traderAgent.warningBadge.setVisible(false);
         });
       }
     });
 
-    // 6. PORTFOLIO_UPDATE Event
     wsService.on<PortfolioUpdatePayload>('PORTFOLIO_UPDATE', (payload) => {
       if (this.balanceText) {
         this.balanceText.setText(`💰 BAKIYE: $${payload.totalBalanceUsd.toLocaleString()}`);
@@ -612,7 +741,6 @@ export class OfficeScene extends Phaser.Scene {
       }
     });
 
-    // 7. NEW_NEWS Event
     wsService.on<NewNewsPayload>('NEW_NEWS', (payload) => {
       this.setAgentState('Haber Takip', 'ALERTING', payload.title);
       this.updateTicker(`📰 [${payload.category}] ${payload.title}`);
@@ -625,22 +753,38 @@ export class OfficeScene extends Phaser.Scene {
       });
     });
 
-    // 8. SIGNAL_GENERATED Event
+    // 8. SIGNAL_GENERATED -> "ALİ" (Sinyal Avcısı) Konuşma Balonu Kuyruğu
     wsService.on<SignalGeneratedPayload>('SIGNAL_GENERATED', (payload) => {
       if (payload.action !== 'HOLD') {
         this.setAgentState('Sinyal Avcısı', 'TRADING', `${payload.action} ${payload.symbol} (Skor: ${payload.signalScore})`);
         this.updateTicker(`⚡ Sinyal: ${payload.action} ${payload.symbol} | Skor: ${payload.signalScore}/100`);
 
+        // Format speech dialogue via template function
+        const dialogue = formatSignalDialogue({
+          symbol: payload.symbol,
+          action: payload.action,
+          signalScore: payload.signalScore,
+          reasoning: payload.reasoning,
+        });
+
+        if (dialogue) {
+          this.queueAliDialogue(dialogue);
+        }
+
         this.time.delayedCall(6000, () => {
           const sigAgent = this.agents.get('Sinyal Avcısı');
-          if (sigAgent && sigAgent.currentState === 'TRADING') {
+          if (sigAgent && sigAgent.currentState === 'TRADING' && !this.isAliSpeaking) {
             this.setAgentState('Sinyal Avcısı', 'IDLE', 'Fırsatlar izleniyor');
           }
         });
       }
     });
 
-    // 9. SYSTEM_STATUS Initial Snapshot
+    // 9. TRADE_PROPOSAL -> Manuel İşlem Onayı Banner'ı
+    wsService.on<TradeProposalPayload>('TRADE_PROPOSAL', (payload) => {
+      this.showTradeProposal(payload);
+    });
+
     wsService.on<SystemStatusPayload>('SYSTEM_STATUS', (payload) => {
       if (payload.currentSceneSeverity) {
         this.updateSceneSeverity(payload.currentSceneSeverity.label as SceneSeverity);
@@ -653,7 +797,62 @@ export class OfficeScene extends Phaser.Scene {
   }
 
   // ==========================================
-  // 8. AGENT STATE VISUAL TRANSITIONS
+  // 9. "ALİ" (SİNYAL AVCISI) KONUŞMA KUYRUĞU
+  // ==========================================
+  private queueAliDialogue(dialogue: string): void {
+    this.aliDialogueQueue.push(dialogue);
+    if (!this.isAliSpeaking) {
+      this.processAliDialogueQueue();
+    }
+  }
+
+  private processAliDialogueQueue(): void {
+    if (this.aliDialogueQueue.length === 0) {
+      this.isAliSpeaking = false;
+      return;
+    }
+
+    this.isAliSpeaking = true;
+    const nextDialogue = this.aliDialogueQueue.shift()!;
+    const sigAgent = this.agents.get('Sinyal Avcısı');
+    if (!sigAgent) {
+      this.isAliSpeaking = false;
+      return;
+    }
+
+    // Show speech bubble
+    sigAgent.bubbleText.setText(nextDialogue);
+    sigAgent.bubbleContainer.setVisible(true);
+    sigAgent.bubbleContainer.setAlpha(0);
+
+    this.tweens.add({
+      targets: sigAgent.bubbleContainer,
+      alpha: 1,
+      y: -68,
+      duration: 250,
+      ease: 'Back.easeOut',
+    });
+
+    // Retain for 4.5 seconds
+    this.time.delayedCall(4500, () => {
+      this.tweens.add({
+        targets: sigAgent.bubbleContainer,
+        alpha: 0,
+        y: -64,
+        duration: 300,
+        onComplete: () => {
+          sigAgent.bubbleContainer.setVisible(false);
+          // Wait 500ms before showing next queued speech
+          this.time.delayedCall(500, () => {
+            this.processAliDialogueQueue();
+          });
+        },
+      });
+    });
+  }
+
+  // ==========================================
+  // 10. AGENT STATE VISUAL TRANSITIONS
   // ==========================================
   public setAgentState(role: AgentRole, state: AgentState, taskDescription?: string): void {
     const agent = this.agents.get(role);
@@ -664,10 +863,11 @@ export class OfficeScene extends Phaser.Scene {
       agent.currentTask = taskDescription;
     }
 
-    // Reset visual indicators
     agent.alertIcon.setVisible(false);
     agent.tradeIcon.setVisible(false);
-    agent.bubbleContainer.setVisible(false);
+    if (role !== 'Sinyal Avcısı' || !this.isAliSpeaking) {
+      agent.bubbleContainer.setVisible(false);
+    }
 
     switch (state) {
       case 'IDLE':
@@ -678,21 +878,27 @@ export class OfficeScene extends Phaser.Scene {
       case 'ANALYZING':
         agent.stateText.setText('⚙ ANALYZING');
         agent.stateText.setColor('#38bdf8');
-        this.showAgentBubble(agent, taskDescription || 'Analiz ediliyor...');
+        if (role !== 'Sinyal Avcısı' || !this.isAliSpeaking) {
+          this.showAgentBubble(agent, taskDescription || 'Analiz ediliyor...');
+        }
         break;
 
       case 'ALERTING':
         agent.stateText.setText('! ALERT');
         agent.stateText.setColor('#ef4444');
         agent.alertIcon.setVisible(true);
-        this.showAgentBubble(agent, taskDescription || 'Uyarı!');
+        if (role !== 'Sinyal Avcısı' || !this.isAliSpeaking) {
+          this.showAgentBubble(agent, taskDescription || 'Uyarı!');
+        }
         break;
 
       case 'TRADING':
         agent.stateText.setText('⚡ TRADING');
         agent.stateText.setColor('#f59e0b');
         agent.tradeIcon.setVisible(true);
-        this.showAgentBubble(agent, taskDescription || 'İşlem yürütülüyor');
+        if (role !== 'Sinyal Avcısı' || !this.isAliSpeaking) {
+          this.showAgentBubble(agent, taskDescription || 'İşlem yürütülüyor');
+        }
         break;
 
       case 'SALUTING':
@@ -704,12 +910,11 @@ export class OfficeScene extends Phaser.Scene {
   }
 
   private showAgentBubble(agent: AgentEntity, text: string): void {
-    agent.bubbleText.setText(text.slice(0, 36));
+    agent.bubbleText.setText(text.slice(0, 48));
     agent.bubbleContainer.setVisible(true);
 
-    // Auto-hide bubble after 4 seconds
     this.time.delayedCall(4000, () => {
-      if (agent.currentState !== 'ANALYZING') {
+      if (agent.currentState !== 'ANALYZING' && (!this.isAliSpeaking || agent.config.role !== 'Sinyal Avcısı')) {
         agent.bubbleContainer.setVisible(false);
       }
     });
@@ -717,13 +922,12 @@ export class OfficeScene extends Phaser.Scene {
 
   private drawBubble(graphics: Phaser.GameObjects.Graphics, width: number, height: number): void {
     graphics.clear();
-    graphics.fillStyle(0xffffff, 0.95);
+    graphics.fillStyle(0xffffff, 0.98);
     graphics.fillRoundedRect(-width / 2, -height / 2, width, height, 6);
     graphics.lineStyle(1, 0x1e293b);
     graphics.strokeRoundedRect(-width / 2, -height / 2, width, height, 6);
 
-    // Little pointer triangle
-    graphics.fillStyle(0xffffff, 0.95);
+    graphics.fillStyle(0xffffff, 0.98);
     graphics.beginPath();
     graphics.moveTo(-4, height / 2);
     graphics.lineTo(4, height / 2);
