@@ -24,6 +24,7 @@ interface PositionCardState {
   pnlEl: HTMLElement;
   sideTagEl: HTMLElement;
   entryEl: HTMLElement;
+  resizeObserver: ResizeObserver;
 }
 
 export class PositionsChartManager {
@@ -223,10 +224,15 @@ export class PositionsChartManager {
     }, 30000);
 
     // Auto Resize Observer for responsive charts
+    let resizeTimer: any = null;
     const resizeObserver = new ResizeObserver((entries) => {
       for (const entry of entries) {
         if (entry.contentRect.width > 0) {
-          chart.applyOptions({ width: entry.contentRect.width });
+          if (resizeTimer) clearTimeout(resizeTimer);
+          resizeTimer = setTimeout(() => {
+            chart.applyOptions({ width: entry.contentRect.width });
+            chart.timeScale().fitContent();
+          }, 50);
         }
       }
     });
@@ -244,6 +250,7 @@ export class PositionsChartManager {
       pnlEl,
       sideTagEl,
       entryEl,
+      resizeObserver,
     });
   }
 
@@ -290,6 +297,7 @@ export class PositionsChartManager {
     clearInterval(cardState.pollInterval);
 
     try {
+      cardState.resizeObserver.disconnect();
       cardState.chart.remove();
     } catch (e) {
       // Ignored

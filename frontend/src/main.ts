@@ -19,8 +19,8 @@ const gameConfig: Phaser.Types.Core.GameConfig = {
     },
   },
   scale: {
-    mode: Phaser.Scale.FIT,
-    autoCenter: Phaser.Scale.CENTER_BOTH,
+    // Fixed pixel-perfect canvas rendering: prevents scroll-triggered infinite resize loops
+    mode: Phaser.Scale.NONE,
   },
   backgroundColor: '#0b0f19',
   scene: [BootScene, OfficeScene],

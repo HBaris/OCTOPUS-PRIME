@@ -477,24 +477,24 @@ export class OfficeScene extends Phaser.Scene {
   private createTradeProposalBanner(): void {
     const { GAME_WIDTH } = APP_CONFIG;
 
-    this.proposalContainer = this.add.container(GAME_WIDTH / 2, 70).setDepth(35);
-    const bg = this.add.rectangle(0, 0, 580, 36, 0x0f172a, 0.98);
+    this.proposalContainer = this.add.container(GAME_WIDTH / 2, 70).setDepth(150);
+    const bg = this.add.rectangle(0, 0, 600, 38, 0x0f172a, 0.98);
     bg.setStrokeStyle(2, 0xf59e0b);
 
-    this.proposalText = this.add.text(-120, 0, '', {
+    this.proposalText = this.add.text(-130, 0, '', {
       fontFamily: 'monospace',
       fontSize: '9px',
       color: '#fbbf24',
     }).setOrigin(0.5);
 
-    this.proposalTimerText = this.add.text(80, 0, '(30s)', {
+    this.proposalTimerText = this.add.text(70, 0, '(30s)', {
       fontFamily: 'monospace',
       fontSize: '8px',
       color: '#94a3b8',
     }).setOrigin(0.5);
 
     // Onayla Button (Green)
-    const approveBtn = this.add.rectangle(170, 0, 90, 22, 0x10b981, 1);
+    const approveBtn = this.add.rectangle(170, 0, 95, 24, 0x10b981, 1);
     approveBtn.setStrokeStyle(1, 0x34d399);
     approveBtn.setInteractive({ useHandCursor: true });
     const approveText = this.add.text(170, 0, 'ONAYLA ✅', {
@@ -511,10 +511,10 @@ export class OfficeScene extends Phaser.Scene {
     });
 
     // Reddet / Kapat Button
-    const dismissBtn = this.add.rectangle(240, 0, 24, 22, 0xef4444, 1);
+    const dismissBtn = this.add.rectangle(245, 0, 26, 24, 0xef4444, 1);
     dismissBtn.setStrokeStyle(1, 0xf87171);
     dismissBtn.setInteractive({ useHandCursor: true });
-    const dismissText = this.add.text(240, 0, '✕', {
+    const dismissText = this.add.text(245, 0, '✕', {
       fontFamily: 'monospace',
       fontSize: '9px',
       color: '#ffffff',
@@ -528,17 +528,35 @@ export class OfficeScene extends Phaser.Scene {
     this.proposalContainer.setVisible(false);
   }
 
-  public showTradeProposal(proposal: TradeProposalPayload): void {
-    this.currentProposal = proposal;
-    this.proposalText.setText(`⚡ ÖNERİ: ${proposal.side} ${proposal.symbol} ($${proposal.suggestedAmountUsd})`);
+  public showTradeProposal(proposal: any): void {
+    console.log('⚡ [OfficeScene] Displaying TRADE_PROPOSAL banner:', proposal);
+    const amount = Number(proposal.suggestedAmountUsd || proposal.estimatedAmountUsd || 50);
+    const side = (proposal.side || 'BUY').toUpperCase() as 'BUY' | 'SELL';
+    const symbol = proposal.symbol || 'BTC/USDT';
+
+    const normalizedProposal: TradeProposalPayload = {
+      proposalId: proposal.proposalId || `prop_${Date.now()}`,
+      symbol,
+      side,
+      suggestedAmountUsd: amount,
+      signalScore: proposal.signalScore || 75,
+      reasoning: proposal.reasoning || proposal.notes || '',
+      timestamp: proposal.timestamp || new Date().toISOString(),
+    };
+
+    this.currentProposal = normalizedProposal;
+    this.proposalText.setText(`⚡ ÖNERİ: ${side} ${symbol} ($${amount})`);
     this.proposalContainer.setVisible(true);
     this.proposalContainer.setAlpha(0);
+    this.proposalContainer.setDepth(150);
 
     this.tweens.add({
       targets: this.proposalContainer,
       alpha: 1,
       duration: 250,
     });
+
+    this.showBanner(`⚡ YENİ İŞLEM ÖNERİSİ: ${side} ${symbol} ($${amount})`, 3500);
 
     // 30 seconds countdown
     let remaining = 30;
@@ -563,10 +581,11 @@ export class OfficeScene extends Phaser.Scene {
   }
 
   private async executeManualProposal(proposal: TradeProposalPayload): Promise<void> {
+    const amount = Number(proposal.suggestedAmountUsd || (proposal as any).estimatedAmountUsd || 50);
     const result = await apiService.placeOrder(
       proposal.symbol,
       proposal.side,
-      proposal.suggestedAmountUsd,
+      amount,
       'MARKET'
     );
 
@@ -781,7 +800,8 @@ export class OfficeScene extends Phaser.Scene {
     });
 
     // 9. TRADE_PROPOSAL -> Manuel İşlem Onayı Banner'ı
-    wsService.on<TradeProposalPayload>('TRADE_PROPOSAL', (payload) => {
+    wsService.on<any>('TRADE_PROPOSAL', (payload) => {
+      console.log('🔔 [OfficeScene] Received TRADE_PROPOSAL from WebSocket:', payload);
       this.showTradeProposal(payload);
     });
 

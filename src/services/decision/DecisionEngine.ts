@@ -172,11 +172,15 @@ export class DecisionEngine {
         signalId: signal.id,
         symbol: signal.symbol,
         side: action,
+        suggestedAmountUsd: Math.min(50.0, config.MAX_POSITION_SIZE_USD),
         estimatedAmountUsd: Math.min(50.0, config.MAX_POSITION_SIZE_USD),
         signalScore: signal.signalScore,
+        confidence: signal.confidence,
+        reasoning: signal.reasoning,
         status: 'SIMULATED',
         isDryRun: true,
         notes: `Otomatik işlem önerisi: Sinyal Skoru ${signalScore}/100 eşik üstünde.`,
+        timestamp: new Date().toISOString(),
       });
     }
 

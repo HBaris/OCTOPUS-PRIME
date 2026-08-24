@@ -4,10 +4,10 @@ export const APP_CONFIG = {
   GAME_WIDTH: 960,
   GAME_HEIGHT: 640,
   WS_URLS: [
-    'ws://localhost:3001/ws',
     'ws://localhost:3000/ws',
-    'ws://127.0.0.1:3001/ws',
     'ws://127.0.0.1:3000/ws',
+    'ws://localhost:3001/ws',
+    'ws://127.0.0.1:3001/ws',
   ],
   REST_API_URL: 'http://localhost:3000/api',
   RECONNECT_INTERVAL_MS: 3000,
