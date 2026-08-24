@@ -97,4 +97,11 @@ describe('REST API Endpoints', () => {
     expect(res.status).toBe(200);
     expect(res.body).toHaveProperty('defcon_1');
   });
+
+  it('POST /api/signals/trigger should respond with success greeting', async () => {
+    const res = await request(app).post('/api/signals/trigger').send({ triggerSource: 'BARIS_BUTTON' });
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.message).toContain('Barış geldi');
+  });
 });

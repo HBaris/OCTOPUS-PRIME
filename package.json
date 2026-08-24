@@ -5,7 +5,10 @@
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
+    "dev:frontend": "npm --prefix frontend run dev",
     "build": "tsc",
+    "build:frontend": "npm --prefix frontend run build",
+    "build:all": "npm run build && npm run build:frontend",
     "start": "node dist/index.js",
     "test": "jest --runInBand",
     "test:coverage": "jest --coverage --runInBand"
