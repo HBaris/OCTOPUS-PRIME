@@ -1,0 +1,53 @@
+{
+  "name": "crypto-agent-backend",
+  "version": "1.0.0",
+  "description": "Binance Testnet Crypto Trading Tracking & Pixel Art Event Backend",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "test": "jest --runInBand",
+    "test:coverage": "jest --coverage --runInBand"
+  },
+  "keywords": [
+    "binance",
+    "testnet",
+    "crypto",
+    "agent",
+    "pixel-art",
+    "trading",
+    "sentiment",
+    "impact-scorer"
+  ],
+  "author": "Antigravity",
+  "license": "MIT",
+  "dependencies": {
+    "@xenova/transformers": "^2.17.2",
+    "ccxt": "^4.4.70",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "helmet": "^8.0.0",
+    "rss-parser": "^3.13.0",
+    "ws": "^8.18.1",
+    "zod": "^3.24.2"
+  },
+  "overrides": {
+    "protobufjs": "^7.6.5",
+    "sharp": "$sharp"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.0",
+    "@types/jest": "^29.5.14",
+    "@types/node": "^22.13.8",
+    "@types/supertest": "^6.0.2",
+    "@types/ws": "^8.5.14",
+    "jest": "^29.7.0",
+    "supertest": "^7.0.0",
+    "ts-jest": "^29.2.6",
+    "tsx": "^4.19.3",
+    "typescript": "^5.7.3"
+  }
+}

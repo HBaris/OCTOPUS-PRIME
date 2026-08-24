@@ -1,0 +1,99 @@
+{
+  "defcon_1": {
+    "keywords": [
+      "savaş",
+      "çatışma",
+      "vuruldu",
+      "saldırı",
+      "istifa acı",
+      "acil toplanıyor",
+      "çöküş",
+      "borsa kapatıldı",
+      "darbe",
+      "nükleer"
+    ],
+    "strength": 1,
+    "description": "Finansal pazarı tamamen çöktürecek olaylar"
+  },
+  "defcon_2": {
+    "keywords": [
+      "fed faiz artış",
+      "merkez bankası",
+      "enflasyon",
+      "durgunluk",
+      "istismarcı",
+      "takas hatası",
+      "reserve gerekirse",
+      "systemic risk"
+    ],
+    "strength": 0.85,
+    "description": "Piyasaya orta seviye etki"
+  },
+  "crypto_specific": {
+    "keywords": [
+      "bitcoin",
+      "ethereum",
+      "kripto",
+      "blockchain",
+      "nft",
+      "sec çalışması",
+      "kripto yasağı",
+      "mining",
+      "defi"
+    ],
+    "strength": 0.9,
+    "description": "Kripto pazarına özel etkiler"
+  },
+  "oil_sensitive": {
+    "keywords": [
+      "petrol",
+      "opec",
+      "şale yağı",
+      "enerji",
+      "ambargo",
+      "üretim kesintisi",
+      "tarafı",
+      "fossil"
+    ],
+    "strength": 0.8,
+    "description": "Petrol ve enerji fiyatlarını etkiler"
+  },
+  "geopolitical": {
+    "keywords": [
+      "jeopolitik",
+      "ticaret savaşı",
+      "tarife",
+      "yaptırım",
+      "anlaşmaz",
+      "anlaşma",
+      "diplomasi",
+      "uluslararası"
+    ],
+    "strength": 0.75,
+    "description": "Uluslararası gerilimler"
+  },
+  "gold_flight": {
+    "keywords": [
+      "altın",
+      "güvenli liman",
+      "korkmuş",
+      "yatırımcı",
+      "risk",
+      "volatilite",
+      "para akanı"
+    ],
+    "strength": 0.7,
+    "description": "Altın ve güvenli varlık akışı"
+  },
+  "ai_tokens": {
+    "keywords": [
+      "bittensor",
+      "tao",
+      "fetch.ai",
+      "render",
+      "asi"
+    ],
+    "strength": 0.85,
+    "description": "Yapay zeka kripto varliklari"
+  }
+}
