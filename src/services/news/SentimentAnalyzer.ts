@@ -3,19 +3,28 @@ import { SentimentLabel } from '../../config/constants.js';
 import { logger } from '../../utils/logger.js';
 import { config } from '../../config/index.js';
 
-// Multilingual financial dictionary for instant fallback and token boosting
+/**
+ * Multilingual financial dictionary for instant, zero-latency lexical sentiment analysis.
+ * Primary strategy: Provides ultra-fast, deterministic evaluation for English and Turkish headlines.
+ */
 const POSITIVE_WORDS = [
+  // English financial & crypto terms
   'surge', 'jump', 'rally', 'bull', 'bullish', 'gain', 'profit', 'rise', 'record',
   'high', 'adoption', 'approval', 'etf approved', 'partnership', 'upgrade', 'breakout',
+  'inflow', 'accumulate', 'soar', 'all-time high', 'ath', 'support', 'growth',
+  // Turkish financial & crypto terms
   'yükseliş', 'rekor', 'kazanç', 'artış', 'onay', 'boğa', 'ralli', 'fırladı', 'yeşil',
-  'büyüme', 'başarı', 'destek', 'zirve', 'güçlü', 'patlama'
+  'büyüme', 'başarı', 'destek', 'zirve', 'güçlü', 'patlama', 'alım', 'toparlanma'
 ];
 
 const NEGATIVE_WORDS = [
+  // English financial & crypto terms
   'crash', 'plunge', 'drop', 'fall', 'dump', 'bear', 'bearish', 'loss', 'hack',
   'exploit', 'sec sue', 'ban', 'lawsuit', 'crisis', 'collapse', 'liquidation', 'scam',
+  'fud', 'investigation', 'outflow', 'decline', 'tank', 'risk', 'warning',
+  // Turkish financial & crypto terms
   'düşüş', 'çöküş', 'zarar', 'ayı', 'kriz', 'yasak', 'dava', 'saldırı', 'hacklendi',
-  'kayıp', 'iflas', 'tasfiye', 'kırmızı', 'satış', 'endişe', 'panik', 'tehdit'
+  'kayıp', 'iflas', 'tasfiye', 'kırmızı', 'satış', 'endişe', 'panik', 'tehdit', 'ceza'
 ];
 
 export class SentimentAnalyzer {
@@ -29,24 +38,33 @@ export class SentimentAnalyzer {
     this.initTransformers();
   }
 
+  /**
+   * Initializes the ONNX transformers pipeline asynchronously.
+   * Public multilingual model: Xenova/distilbert-base-multilingual-cased-sentiments-student
+   * Note: Lexical fallback is active immediately from millisecond 0 so no startup is delayed.
+   */
   private async initTransformers(): Promise<void> {
     if (this.isInitializing || this.isReady) return;
     this.isInitializing = true;
 
     try {
       logger.info(`🤖 Initializing Node-native ONNX sentiment pipeline (${this.modelName})...`);
-      // Dynamic import to support ESM/CJS compatibility and lazy loading
+      // Dynamic import for Node/ESM compatibility
       const { pipeline, env } = await import('@xenova/transformers');
       
-      // Configure transformers for Node.js environment
       env.allowLocalModels = true;
+      env.allowRemoteModels = true;
       env.useBrowserCache = false;
 
-      this.pipeline = await pipeline('sentiment-analysis', this.modelName);
+      this.pipeline = await pipeline('sentiment-analysis', this.modelName, {
+        quantized: true,
+      });
       this.isReady = true;
-      logger.info('✅ Node-native Sentiment ONNX pipeline loaded successfully');
+      logger.info(`✅ Node-native Sentiment ONNX pipeline (${this.modelName}) loaded successfully`);
     } catch (err) {
-      logger.warn(`⚠️ Transformers ONNX model loading skipped or deferred (${(err as Error).message}). Using optimized multilingual lexicon engine.`);
+      logger.warn(
+        `⚠️ Transformers ONNX model loading skipped or deferred (${(err as Error).message}). Using optimized multilingual lexicon engine as primary strategy.`
+      );
       this.pipeline = null;
       this.isReady = false;
     } finally {
@@ -54,6 +72,11 @@ export class SentimentAnalyzer {
     }
   }
 
+  /**
+   * Analyzes text sentiment:
+   * 1. If ONNX model is ready, executes neural inference with lexical hybrid booster
+   * 2. Otherwise uses the optimized multilingual lexical engine (primary fast strategy)
+   */
   public async analyze(text: string): Promise<SentimentAnalysisResult> {
     const trimmed = text.trim();
     if (!trimmed) {
@@ -64,7 +87,7 @@ export class SentimentAnalyzer {
       };
     }
 
-    // If ONNX pipeline is available, try running it
+    // Run ONNX neural pipeline if loaded
     if (this.pipeline && this.isReady) {
       try {
         const truncated = trimmed.slice(0, 512);
@@ -75,9 +98,19 @@ export class SentimentAnalyzer {
           const score = typeof item.score === 'number' ? item.score : 0.75;
 
           let label: SentimentLabel = SentimentLabel.NEUTRAL;
-          if (rawLabel.includes('POS') || rawLabel === 'LABEL_2' || rawLabel === 'POSITIVE') {
+          if (
+            rawLabel.includes('POS') ||
+            rawLabel === 'LABEL_2' ||
+            rawLabel.includes('5') ||
+            rawLabel.includes('4')
+          ) {
             label = SentimentLabel.POSITIVE;
-          } else if (rawLabel.includes('NEG') || rawLabel === 'LABEL_0' || rawLabel === 'NEGATIVE') {
+          } else if (
+            rawLabel.includes('NEG') ||
+            rawLabel === 'LABEL_0' ||
+            rawLabel.includes('1') ||
+            rawLabel.includes('2')
+          ) {
             label = SentimentLabel.NEGATIVE;
           } else {
             label = SentimentLabel.NEUTRAL;
@@ -94,10 +127,13 @@ export class SentimentAnalyzer {
       }
     }
 
-    // Lexical multilingual analysis
+    // High-performance primary multilingual lexical analysis
     return this.analyzeLexical(trimmed);
   }
 
+  /**
+   * Fast multilingual dictionary-based sentiment scoring
+   */
   public analyzeLexical(text: string): SentimentAnalysisResult {
     const lower = text.toLowerCase();
 

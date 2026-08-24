@@ -24,8 +24,8 @@ const envSchema = z.object({
   DECISION_SIGNAL_THRESHOLD: z.coerce.number().min(0).max(100).default(70),
   CORRELATION_CHECK_MINUTES: z.coerce.number().min(1).default(15),
   
-  // Sentiment Model
-  SENTIMENT_MODEL: z.string().default('Xenova/twitter-xlm-roberta-base-sentiment'),
+  // Sentiment Model (Public multilingual sentiment model)
+  SENTIMENT_MODEL: z.string().default('Xenova/distilbert-base-multilingual-cased-sentiments-student'),
 });
 
 const parsedEnv = envSchema.safeParse(process.env);

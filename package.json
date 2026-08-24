@@ -38,7 +38,7 @@
   },
   "overrides": {
     "protobufjs": "^7.6.5",
-    "sharp": "$sharp"
+    "sharp": "^0.35.3"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",
