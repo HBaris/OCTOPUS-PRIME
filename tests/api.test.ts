@@ -104,4 +104,17 @@ describe('REST API Endpoints', () => {
     expect(res.body.success).toBe(true);
     expect(res.body.message).toContain('Barış geldi');
   });
+
+  it('GET /api/portfolio/chart/:symbol should return formatted candle list', async () => {
+    const res = await request(app).get('/api/portfolio/chart/BTCUSDT');
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body)).toBe(true);
+    expect(res.body.length).toBeGreaterThan(0);
+    expect(res.body[0]).toHaveProperty('time');
+    expect(res.body[0]).toHaveProperty('open');
+    expect(res.body[0]).toHaveProperty('high');
+    expect(res.body[0]).toHaveProperty('low');
+    expect(res.body[0]).toHaveProperty('close');
+    expect(res.body[0]).toHaveProperty('volume');
+  });
 });

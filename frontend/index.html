@@ -3,14 +3,37 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Crypto Trading Agent - Pixel Art Office</title>
+    <title>Crypto Trading Agent - Pixel Art Office & Open Positions</title>
     <link rel="stylesheet" href="./src/style.css" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
   </head>
   <body>
-    <div id="game-container"></div>
+    <div id="app-layout">
+      <!-- Left: Phaser 3 Office Scene -->
+      <div id="game-container"></div>
+
+      <!-- Right: Open Positions Live Candlestick Charts Panel -->
+      <aside id="positions-panel">
+        <div class="panel-header">
+          <div class="header-title">
+            <span class="panel-icon">📊</span>
+            <h2>AÇIK POZİSYONLAR</h2>
+          </div>
+          <span id="positions-count-badge" class="count-badge">0</span>
+        </div>
+
+        <div id="positions-container" class="positions-list">
+          <div id="positions-empty-placeholder" class="empty-placeholder">
+            <span class="empty-icon">💤</span>
+            <p>Henüz açık pozisyon yok</p>
+            <small>Emirler açıldığında canlı mum grafiği burada belirecektir.</small>
+          </div>
+        </div>
+      </aside>
+    </div>
+
     <script type="module" src="./src/main.ts"></script>
   </body>
 </html>

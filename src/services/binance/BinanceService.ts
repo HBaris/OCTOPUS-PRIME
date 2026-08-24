@@ -1,5 +1,5 @@
 import { config } from '../../config/index.js';
-import { WalletBalance, PositionInfo, SimulatedOrder, MarketTicker, Candle } from '../../types/market.js';
+import { WalletBalance, PositionInfo, SimulatedOrder, MarketTicker, Candle, ChartCandle } from '../../types/market.js';
 import { eventBus } from '../../events/EventBus.js';
 import { EventType } from '../../config/constants.js';
 import { logger } from '../../utils/logger.js';
@@ -217,6 +217,26 @@ export class BinanceService {
     }
 
     return candles;
+  }
+
+  /**
+   * Fetches OHLCV candles formatted for Lightweight Charts
+   * Wraps ccxt fetchOHLCV with testnet / simulation fallback
+   */
+  public async fetchCandles(
+    symbol: string,
+    timeframe = '15m',
+    limit = 100
+  ): Promise<ChartCandle[]> {
+    const rawCandles = await this.getCandles(symbol, timeframe, limit);
+    return rawCandles.map((c) => ({
+      time: Math.floor(c.timestamp / 1000),
+      open: c.open,
+      high: c.high,
+      low: c.low,
+      close: c.close,
+      volume: c.volume,
+    }));
   }
 
   /**

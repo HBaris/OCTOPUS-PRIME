@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { BootScene } from './scenes/BootScene.ts';
 import { OfficeScene } from './scenes/OfficeScene.ts';
 import { APP_CONFIG } from './config.ts';
+import './services/positionsChartManager.ts';
 
 const gameConfig: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
@@ -28,4 +29,4 @@ const gameConfig: Phaser.Types.Core.GameConfig = {
 // Initialize Phaser Game instance
 new Phaser.Game(gameConfig);
 
-console.log('👾 Crypto Trading Agent Pixel Art Office Simulation initialized.');
+console.log('👾 Crypto Trading Agent Pixel Art Office Simulation & Positions Chart initialized.');

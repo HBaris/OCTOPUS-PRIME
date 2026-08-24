@@ -17,6 +17,15 @@ export interface Candle {
   volume: number;
 }
 
+export interface ChartCandle {
+  time: number; // Unix timestamp in seconds for lightweight-charts
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+}
+
 export interface WalletBalance {
   totalUsd: number;
   freeUsdt: number;

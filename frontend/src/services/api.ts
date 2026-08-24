@@ -50,4 +50,19 @@ export const apiService = {
     }
     return null;
   },
+
+  async fetchCandles(symbol: string, timeframe = '15m', limit = 100): Promise<any[]> {
+    try {
+      const cleanSymbol = symbol.replace('/', '');
+      const response = await fetch(
+        `${APP_CONFIG.REST_API_URL}/portfolio/chart/${cleanSymbol}?timeframe=${timeframe}&limit=${limit}`
+      );
+      if (response.ok) {
+        return await response.json();
+      }
+    } catch (err) {
+      console.warn(`[API] Failed to fetch candles for ${symbol}:`, err);
+    }
+    return [];
+  },
 };
