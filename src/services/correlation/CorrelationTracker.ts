@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { DEFAULT_CORRELATIONS, EventType } from '../../config/constants.js';
 import { eventBus } from '../../events/EventBus.js';
-import { BinanceService } from '../binance/BinanceService.js';
+import { IExchangeService } from '../exchange/IExchangeService.js';
 import { logger } from '../../utils/logger.js';
 import { config } from '../../config/index.js';
 
@@ -24,13 +24,13 @@ export class CorrelationTracker {
   private correlationsFilePath: string;
   private correlations: Record<string, Record<string, number>> = {};
   private eventLog: TrackedEventRecord[] = [];
-  private binanceService: BinanceService;
+  private exchangeService: IExchangeService;
   private monitorTimer: NodeJS.Timeout | null = null;
   private emaAccuracy = 0.75; // Starting confidence base
   private readonly alpha = 0.3; // 30% weight to new data, 70% to previous
 
-  constructor(binanceService: BinanceService, filePath = 'correlations.json') {
-    this.binanceService = binanceService;
+  constructor(exchangeService: IExchangeService, filePath = 'correlations.json') {
+    this.exchangeService = exchangeService;
     this.correlationsFilePath = path.isAbsolute(filePath)
       ? filePath
       : path.resolve(process.cwd(), filePath);
@@ -76,7 +76,7 @@ export class CorrelationTracker {
     expectedDirection: number, // 1 or -1
     minutesDelay = config.CORRELATION_CHECK_MINUTES
   ): Promise<string> {
-    const ticker = await this.binanceService.getTicker(symbol);
+    const ticker = await this.exchangeService.fetchTicker(symbol);
     const now = new Date();
     const checkTime = new Date(now.getTime() + minutesDelay * 60 * 1000);
 
@@ -111,7 +111,7 @@ export class CorrelationTracker {
 
   public async evaluateEvent(event: TrackedEventRecord): Promise<void> {
     try {
-      const ticker = await this.binanceService.getTicker(event.symbol);
+      const ticker = await this.exchangeService.fetchTicker(event.symbol);
       const currentPrice = ticker.lastPrice;
       const changePercent = (currentPrice - event.initialPrice) / event.initialPrice;
 

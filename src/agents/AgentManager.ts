@@ -1,7 +1,7 @@
 import { AgentRole, AgentState, EventType, SceneSeverity } from '../config/constants.js';
 import { AgentInfo, SystemState } from '../types/agent.js';
 import { eventBus } from '../events/EventBus.js';
-import { BinanceService } from '../services/binance/BinanceService.js';
+import { IExchangeService } from '../services/exchange/IExchangeService.js';
 import { CorrelationTracker } from '../services/correlation/CorrelationTracker.js';
 import { logger } from '../utils/logger.js';
 import { createSpecialistAgentInfos, SpecialistAgentsManager } from './SpecialistAgents.js';
@@ -12,12 +12,12 @@ export class AgentManager {
     label: SceneSeverity.HAFIF,
     score: 1.0,
   };
-  private binanceService: BinanceService;
+  private exchangeService: IExchangeService;
   private correlationTracker: CorrelationTracker;
   private specialistsManager: SpecialistAgentsManager;
 
-  constructor(binanceService: BinanceService, correlationTracker: CorrelationTracker) {
-    this.binanceService = binanceService;
+  constructor(exchangeService: IExchangeService, correlationTracker: CorrelationTracker) {
+    this.exchangeService = exchangeService;
     this.correlationTracker = correlationTracker;
 
     const baseAgents: Record<AgentRole, AgentInfo> = {
@@ -229,8 +229,8 @@ export class AgentManager {
   }
 
   public async getSystemState(): Promise<SystemState> {
-    const balance = await this.binanceService.getBalance();
-    const positions = await this.binanceService.getPositions();
+    const balance = await this.exchangeService.fetchBalance();
+    const positions = await this.exchangeService.fetchPositions();
 
     let totalPnl = 0;
     for (const p of positions) {

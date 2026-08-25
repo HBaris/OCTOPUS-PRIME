@@ -1,14 +1,14 @@
 import { TradingSignal, DecisionWeights } from '../../types/signals.js';
 import { EventType } from '../../config/constants.js';
 import { eventBus } from '../../events/EventBus.js';
-import { BinanceService } from '../binance/BinanceService.js';
+import { IExchangeService } from '../exchange/IExchangeService.js';
 import { CorrelationTracker } from '../correlation/CorrelationTracker.js';
 import { FeedbackSystem } from '../feedback/FeedbackSystem.js';
 import { logger } from '../../utils/logger.js';
 import { config } from '../../config/index.js';
 
 export class DecisionEngine {
-  private binanceService: BinanceService;
+  private exchangeService: IExchangeService;
   private correlationTracker: CorrelationTracker;
   private feedbackSystem: FeedbackSystem;
   private weights: DecisionWeights = {
@@ -21,11 +21,11 @@ export class DecisionEngine {
   private signalHistory: TradingSignal[] = [];
 
   constructor(
-    binanceService: BinanceService,
+    exchangeService: IExchangeService,
     correlationTracker: CorrelationTracker,
     feedbackSystem: FeedbackSystem
   ) {
-    this.binanceService = binanceService;
+    this.exchangeService = exchangeService;
     this.correlationTracker = correlationTracker;
     this.feedbackSystem = feedbackSystem;
 
@@ -62,7 +62,7 @@ export class DecisionEngine {
     category: string
   ): Promise<TradingSignal | null> {
     const formattedSymbol = symbol.includes('/') ? symbol : `${symbol}/USDT`;
-    const ticker = await this.binanceService.getTicker(formattedSymbol);
+    const ticker = await this.exchangeService.fetchTicker(formattedSymbol);
 
     // 1. News Impact component (0 - 100)
     const newsScore = newsImpactScore * 10;
@@ -79,7 +79,6 @@ export class DecisionEngine {
     }
 
     // 3. Price Momentum Component (0 - 100)
-    // 24h change gives an indication of trend alignment
     const change24h = ticker.change24hPercent;
     let momentumScore = 50;
     if (expectedDirection > 0) {
@@ -168,6 +167,10 @@ export class DecisionEngine {
 
       const suggestedStopLoss = Math.round((action === 'BUY' ? ticker.lastPrice * 0.98 : ticker.lastPrice * 1.02) * 100) / 100;
       const suggestedTakeProfit = Math.round((action === 'BUY' ? ticker.lastPrice * 1.04 : ticker.lastPrice * 0.96) * 100) / 100;
+      const suggestedLeverage = config.DEFAULT_LEVERAGE;
+      const suggestedMarginMode = config.DEFAULT_MARGIN_MODE;
+      const estimatedMarginUsd = Math.min(50.0, config.MAX_POSITION_SIZE_USD);
+      const estimatedPositionSizeUsd = estimatedMarginUsd * suggestedLeverage;
 
       // Emit TRADE_PROPOSAL event (Safe proposal, NO live order executed)
       eventBus.publish(EventType.TRADE_PROPOSAL, {
@@ -175,8 +178,12 @@ export class DecisionEngine {
         signalId: signal.id,
         symbol: signal.symbol,
         side: action,
-        suggestedAmountUsd: Math.min(50.0, config.MAX_POSITION_SIZE_USD),
-        estimatedAmountUsd: Math.min(50.0, config.MAX_POSITION_SIZE_USD),
+        suggestedAmountUsd: estimatedMarginUsd,
+        estimatedAmountUsd: estimatedMarginUsd,
+        suggestedLeverage,
+        suggestedMarginMode,
+        estimatedMarginUsd,
+        estimatedPositionSizeUsd,
         signalScore: signal.signalScore,
         confidence: signal.confidence,
         reasoning: signal.reasoning,
@@ -185,7 +192,7 @@ export class DecisionEngine {
         suggestedTakeProfit,
         status: 'SIMULATED',
         isDryRun: true,
-        notes: `Otomatik işlem önerisi: Sinyal Skoru ${signalScore}/100 eşik üstünde.`,
+        notes: `Otomatik işlem önerisi: Sinyal Skoru ${signalScore}/100, ${suggestedLeverage}x kaldıraç (${suggestedMarginMode}).`,
         timestamp: new Date().toISOString(),
       });
     }

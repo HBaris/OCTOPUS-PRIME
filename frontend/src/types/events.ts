@@ -10,6 +10,7 @@ export type EventType =
   | 'ORDER_SIMULATED'
   | 'ORDER_EXECUTED'
   | 'SPENDING_LIMIT_WARNING'
+  | 'LIQUIDATION_RISK_WARNING'
   | 'SYSTEM_STATUS';
 
 export type AgentRole =
@@ -72,6 +73,18 @@ export interface SpendingLimitWarningPayload {
   actionBlocked: boolean;
 }
 
+export interface LiquidationRiskWarningPayload {
+  symbol: string;
+  side: 'LONG' | 'SHORT';
+  currentPrice: number;
+  liquidationPrice: number;
+  distancePercent: number;
+  leverage: number;
+  marginUsed: number;
+  warningMessage: string;
+  timestamp: string;
+}
+
 export interface PortfolioUpdatePayload {
   totalBalanceUsd: number;
   freeUsdt: number;
@@ -85,6 +98,10 @@ export interface PortfolioUpdatePayload {
     percentagePnl?: number;
     pnlPercentage?: number;
     side?: 'LONG' | 'SHORT';
+    leverage?: number;
+    marginMode?: 'isolated' | 'cross';
+    liquidationPrice?: number;
+    marginUsed?: number;
     signalId?: string;
     sourceCategory?: string;
     stopLoss?: number;
@@ -126,6 +143,10 @@ export interface TradeProposalPayload {
   side: 'BUY' | 'SELL';
   suggestedAmountUsd?: number;
   estimatedAmountUsd?: number;
+  suggestedLeverage?: number;
+  suggestedMarginMode?: 'isolated' | 'cross';
+  estimatedMarginUsd?: number;
+  estimatedPositionSizeUsd?: number;
   signalScore: number;
   confidence?: number;
   reasoning?: string;

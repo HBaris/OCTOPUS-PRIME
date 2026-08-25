@@ -32,6 +32,8 @@ export interface WalletBalance {
   assets: Record<string, { free: number; used: number; total: number; valueUsd: number }>;
 }
 
+export type PortfolioBalance = WalletBalance;
+
 export interface PositionInfo {
   symbol: string;
   amount: number;
@@ -42,11 +44,16 @@ export interface PositionInfo {
   percentagePnl: number;
   liquidationPrice?: number;
   side: 'LONG' | 'SHORT';
+  leverage?: number;
+  marginMode?: 'isolated' | 'cross';
+  marginUsed?: number;
   signalId?: string;
   sourceCategory?: string;
   stopLoss?: number;
   takeProfit?: number;
 }
+
+export type Position = PositionInfo;
 
 export interface SimulatedOrder {
   id: string;
@@ -56,6 +63,10 @@ export interface SimulatedOrder {
   amount: number;
   price: number;
   totalUsd: number;
+  leverage?: number;
+  marginMode?: 'isolated' | 'cross';
+  liquidationPrice?: number;
+  marginUsed?: number;
   status: 'FILLED' | 'CANCELLED' | 'REJECTED';
   timestamp: string;
   signalId?: string;
@@ -63,4 +74,39 @@ export interface SimulatedOrder {
   stopLoss?: number;
   takeProfit?: number;
   notes?: string;
+}
+
+export interface OrderRequest {
+  symbol: string;
+  side: 'BUY' | 'SELL';
+  amountUsd: number;
+  type?: 'MARKET' | 'LIMIT';
+  price?: number;
+  leverage?: number;
+  marginMode?: 'isolated' | 'cross';
+  options?: {
+    signalId?: string;
+    sourceCategory?: string;
+    stopLoss?: number;
+    takeProfit?: number;
+    notes?: string;
+  };
+}
+
+export interface OrderResult {
+  success: boolean;
+  orderId?: string;
+  symbol: string;
+  side: 'BUY' | 'SELL';
+  price?: number;
+  amount?: number;
+  totalUsd?: number;
+  leverage?: number;
+  marginMode?: 'isolated' | 'cross';
+  liquidationPrice?: number;
+  marginUsed?: number;
+  message?: string;
+  isSimulated: boolean;
+  simulated?: boolean;
+  timestamp: string;
 }

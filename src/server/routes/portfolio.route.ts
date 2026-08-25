@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { BinanceService } from '../../services/binance/BinanceService.js';
+import { config } from '../../config/index.js';
+import { IExchangeService } from '../../services/exchange/IExchangeService.js';
 import { validateBody } from '../middleware/validation.js';
 
 const orderSchema = z.object({
@@ -8,6 +9,8 @@ const orderSchema = z.object({
   side: z.enum(['BUY', 'SELL']),
   amountUsd: z.number().positive(),
   orderType: z.enum(['MARKET', 'LIMIT']).default('MARKET'),
+  leverage: z.number().min(1).max(config.MAX_LEVERAGE_ALLOWED).optional(),
+  marginMode: z.enum(['isolated', 'cross']).optional(),
   signalId: z.string().optional(),
   sourceCategory: z.string().optional(),
   stopLoss: z.number().positive().optional(),
@@ -23,14 +26,14 @@ const chartQuerySchema = z.object({
   limit: z.coerce.number().min(1).max(500).default(100),
 });
 
-export function createPortfolioRouter(binanceService: BinanceService): Router {
+export function createPortfolioRouter(exchangeService: IExchangeService): Router {
   const router = Router();
 
   router.get('/', async (_req, res, next) => {
     try {
-      const balance = await binanceService.getBalance();
-      const positions = await binanceService.getPositions();
-      const recentOrders = binanceService.getRecentOrders();
+      const balance = await exchangeService.fetchBalance();
+      const positions = await exchangeService.fetchPositions();
+      const recentOrders = (exchangeService as any).getRecentOrders ? (exchangeService as any).getRecentOrders() : [];
 
       let totalUnrealizedPnl = 0;
       for (const p of positions) {
@@ -76,7 +79,10 @@ export function createPortfolioRouter(binanceService: BinanceService): Router {
         rawSymbol = `${rawSymbol.replace('USDT', '')}/USDT`;
       }
 
-      const candles = await binanceService.fetchCandles(rawSymbol, timeframe, limit);
+      const candles = (exchangeService as any).fetchChartCandles
+        ? await (exchangeService as any).fetchChartCandles(rawSymbol, timeframe, limit)
+        : await exchangeService.fetchCandles(rawSymbol, timeframe, limit);
+
       res.json(candles);
     } catch (err) {
       next(err);
@@ -85,12 +91,32 @@ export function createPortfolioRouter(binanceService: BinanceService): Router {
 
   router.post('/order', validateBody(orderSchema), async (req, res, next) => {
     try {
-      const { symbol, side, amountUsd, orderType, signalId, sourceCategory, stopLoss, takeProfit } = req.body;
-      const result = await binanceService.executeOrder(symbol, side, amountUsd, orderType, {
+      const {
+        symbol,
+        side,
+        amountUsd,
+        orderType,
+        leverage,
+        marginMode,
         signalId,
         sourceCategory,
         stopLoss,
         takeProfit,
+      } = req.body;
+
+      const result = await exchangeService.executeOrder({
+        symbol,
+        side,
+        amountUsd,
+        type: orderType,
+        leverage,
+        marginMode,
+        options: {
+          signalId,
+          sourceCategory,
+          stopLoss,
+          takeProfit,
+        },
       });
 
       if (!result.success) {

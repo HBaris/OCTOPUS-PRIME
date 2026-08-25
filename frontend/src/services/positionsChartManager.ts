@@ -10,7 +10,7 @@ import {
 } from 'lightweight-charts';
 import { wsService } from './websocket.ts';
 import { apiService } from './api.ts';
-import { PortfolioUpdatePayload, SystemStatusPayload } from '../types/events.ts';
+import { PortfolioUpdatePayload, SystemStatusPayload, LiquidationRiskWarningPayload } from '../types/events.ts';
 
 interface PositionItem {
   symbol: string;
@@ -21,6 +21,10 @@ interface PositionItem {
   unrealizedPnl: number;
   percentagePnl?: number;
   side?: string;
+  leverage?: number;
+  marginMode?: 'isolated' | 'cross';
+  liquidationPrice?: number;
+  marginUsed?: number;
   signalId?: string;
   sourceCategory?: string;
   stopLoss?: number;
@@ -39,10 +43,14 @@ interface PositionCardState {
   sideTagEl: HTMLElement;
   entryEl: HTMLElement;
   sourceEl: HTMLElement;
+  leverageEl: HTMLElement;
+  liquidationEl: HTMLElement;
+  liquidationWarningEl: HTMLElement;
   sltpContainerEl: HTMLElement;
   resizeObserver: ResizeObserver;
   stopLossLine?: IPriceLine;
   takeProfitLine?: IPriceLine;
+  liquidationLine?: IPriceLine;
 }
 
 export class PositionsChartManager {
@@ -52,7 +60,6 @@ export class PositionsChartManager {
   private countBadgeEl: HTMLElement | null = null;
 
   constructor() {
-    // Wait for DOM to be ready
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', () => this.init());
     } else {
@@ -80,10 +87,35 @@ export class PositionsChartManager {
     // 2. Listen to SYSTEM_STATUS
     wsService.on<SystemStatusPayload>('SYSTEM_STATUS', (payload) => {
       if (payload && payload.portfolioSummary) {
-        // Fetch full portfolio to get positions list
         this.fetchInitialPositions();
       }
     });
+
+    // 3. Listen to LIQUIDATION_RISK_WARNING
+    wsService.on<LiquidationRiskWarningPayload>('LIQUIDATION_RISK_WARNING', (payload) => {
+      if (payload && payload.symbol) {
+        this.handleLiquidationWarning(payload);
+      }
+    });
+  }
+
+  private handleLiquidationWarning(warning: LiquidationRiskWarningPayload): void {
+    const card = this.cards.get(warning.symbol);
+    if (!card) return;
+
+    card.liquidationWarningEl.style.display = 'block';
+    card.liquidationWarningEl.textContent = `⚠️ LİKİDASYON RİSKİ! (${warning.distancePercent}% kaldı)`;
+
+    card.cardEl.style.border = '2px solid #ef4444';
+    card.cardEl.style.boxShadow = '0 0 16px rgba(239, 68, 68, 0.6)';
+
+    // Reset alert highlight after 12s
+    setTimeout(() => {
+      if (card.cardEl) {
+        card.cardEl.style.border = '';
+        card.cardEl.style.boxShadow = '';
+      }
+    }, 12000);
   }
 
   private async fetchInitialPositions(): Promise<void> {
@@ -93,9 +125,6 @@ export class PositionsChartManager {
     }
   }
 
-  /**
-   * Synchronizes active position cards with current positions list
-   */
   public updatePositions(positions: PositionItem[]): void {
     const currentSymbols = new Set(positions.map((p) => p.symbol));
 
@@ -129,6 +158,15 @@ export class PositionsChartManager {
 
     const side = pos.side || (pos.amount >= 0 ? 'LONG' : 'SHORT');
     const sideClass = side.toLowerCase();
+    const leverage = pos.leverage || 5;
+    const marginMode = pos.marginMode || 'isolated';
+
+    // Liquidation Warning Ribbon (Hidden by default)
+    const liquidationWarningEl = document.createElement('div');
+    liquidationWarningEl.className = 'liquidation-warning-banner';
+    liquidationWarningEl.style.cssText =
+      'display: none; background: #b91c1c; color: #ffffff; font-family: monospace; font-size: 11px; font-weight: bold; text-align: center; padding: 4px; animation: pulse 1.2s infinite;';
+    cardEl.appendChild(liquidationWarningEl);
 
     // Card Header
     const headerEl = document.createElement('div');
@@ -145,8 +183,15 @@ export class PositionsChartManager {
     sideTagEl.className = `card-side-tag ${sideClass}`;
     sideTagEl.textContent = side;
 
+    const leverageEl = document.createElement('span');
+    leverageEl.className = 'card-leverage-tag';
+    leverageEl.style.cssText =
+      'background: #1e3a8a; color: #93c5fd; font-size: 10px; font-family: monospace; padding: 2px 6px; border-radius: 4px; margin-left: 4px;';
+    leverageEl.textContent = `${leverage}x (${marginMode})`;
+
     symbolWrap.appendChild(symbolEl);
     symbolWrap.appendChild(sideTagEl);
+    symbolWrap.appendChild(leverageEl);
 
     // Stats (Price & PnL)
     const statsEl = document.createElement('div');
@@ -173,7 +218,7 @@ export class PositionsChartManager {
     headerEl.appendChild(statsEl);
     cardEl.appendChild(headerEl);
 
-    // SL/TP Badge Row (Header Sub-bar)
+    // SL/TP & Liquidation Row
     const sltpContainerEl = document.createElement('div');
     sltpContainerEl.className = 'card-sltp-row';
     sltpContainerEl.style.cssText =
@@ -181,10 +226,16 @@ export class PositionsChartManager {
 
     const sourceEl = document.createElement('span');
     sourceEl.className = 'source-label';
-    sourceEl.textContent = `⚡ Kaynak: ${this.formatCategory(pos.sourceCategory)}`;
+    sourceEl.textContent = `⚡ ${this.formatCategory(pos.sourceCategory)}`;
 
     const sltpBadges = document.createElement('div');
     sltpBadges.style.cssText = 'display: flex; gap: 6px; align-items: center;';
+
+    const liquidationEl = document.createElement('span');
+    liquidationEl.className = 'sltp-tag liq';
+    liquidationEl.style.cssText = 'background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid #ef4444; padding: 1px 5px; border-radius: 3px; font-size: 10px;';
+    const liqPrice = pos.liquidationPrice || (side === 'LONG' ? pos.entryPrice * (1 - 1 / leverage + 0.005) : pos.entryPrice * (1 + 1 / leverage - 0.005));
+    liquidationEl.textContent = `Liq: $${Math.round(liqPrice).toLocaleString()}`;
 
     const slTag = document.createElement('span');
     slTag.className = 'sltp-tag sl';
@@ -194,6 +245,7 @@ export class PositionsChartManager {
     tpTag.className = 'sltp-tag tp';
     tpTag.textContent = pos.takeProfit ? `TP: $${pos.takeProfit.toLocaleString()}` : `TP: $${(pos.entryPrice * 1.04).toFixed(1)}`;
 
+    sltpBadges.appendChild(liquidationEl);
     sltpBadges.appendChild(slTag);
     sltpBadges.appendChild(tpTag);
 
@@ -212,7 +264,8 @@ export class PositionsChartManager {
 
     const entryEl = document.createElement('span');
     entryEl.className = 'entry-label';
-    entryEl.textContent = `Giriş: $${pos.entryPrice.toLocaleString()} | Miktar: ${pos.amount}`;
+    const marginText = pos.marginUsed ? ` | Margin: $${pos.marginUsed.toFixed(1)}` : '';
+    entryEl.textContent = `Giriş: $${pos.entryPrice.toLocaleString()} | Miktar: ${pos.amount}${marginText}`;
 
     const intervalLabel = document.createElement('span');
     intervalLabel.textContent = '15m • CCXT';
@@ -267,12 +320,13 @@ export class PositionsChartManager {
     // Initial Candle Data Fetch
     this.loadCandles(pos.symbol, series, chart);
 
-    // 3. Draw Stop-Loss and Take-Profit Reference Lines on the Chart
+    // 3. Draw SL, TP, and Liquidation Reference Lines on Chart
     const stopLossPrice = pos.stopLoss || (side === 'LONG' ? pos.entryPrice * 0.98 : pos.entryPrice * 1.02);
     const takeProfitPrice = pos.takeProfit || (side === 'LONG' ? pos.entryPrice * 1.04 : pos.entryPrice * 0.96);
 
     let stopLossLine: IPriceLine | undefined;
     let takeProfitLine: IPriceLine | undefined;
+    let liquidationLine: IPriceLine | undefined;
 
     try {
       stopLossLine = series.createPriceLine({
@@ -292,16 +346,24 @@ export class PositionsChartManager {
         axisLabelVisible: true,
         title: 'TP',
       });
+
+      // Orange Dashed Liquidation Line
+      liquidationLine = series.createPriceLine({
+        price: liqPrice,
+        color: '#f97316',
+        lineWidth: 1,
+        lineStyle: 2, // Dashed
+        axisLabelVisible: true,
+        title: 'LİKİDASYON',
+      });
     } catch (err) {
-      console.warn('[PositionsChart] Error creating SL/TP price lines:', err);
+      console.warn('[PositionsChart] Error creating SL/TP/Liq price lines:', err);
     }
 
-    // 30s Polling Interval for chart updates
     const pollInterval = setInterval(() => {
       this.loadCandles(pos.symbol, series, chart);
     }, 30000);
 
-    // Auto Resize Observer for responsive charts
     let resizeTimer: any = null;
     const resizeObserver = new ResizeObserver((entries) => {
       for (const entry of entries) {
@@ -329,10 +391,14 @@ export class PositionsChartManager {
       sideTagEl,
       entryEl,
       sourceEl,
+      leverageEl,
+      liquidationEl,
+      liquidationWarningEl,
       sltpContainerEl,
       resizeObserver,
       stopLossLine,
       takeProfitLine,
+      liquidationLine,
     });
   }
 
@@ -384,15 +450,26 @@ export class PositionsChartManager {
     state.pnlEl.className = `card-pnl ${isProfit ? 'positive' : 'negative'}`;
     state.pnlEl.textContent = `${pnlSign}$${pos.unrealizedPnl.toFixed(2)} (${pnlSign}${pnlPercent.toFixed(2)}%)`;
 
-    state.entryEl.textContent = `Giriş: $${pos.entryPrice.toLocaleString()} | Miktar: ${pos.amount}`;
-    state.sourceEl.textContent = `⚡ Kaynak: ${this.formatCategory(pos.sourceCategory)}`;
+    const leverage = pos.leverage || 5;
+    const marginMode = pos.marginMode || 'isolated';
+    state.leverageEl.textContent = `${leverage}x (${marginMode})`;
 
-    // Update SL/TP reference lines if changed
+    const liqPrice = pos.liquidationPrice || (pos.side === 'SHORT' ? pos.entryPrice * (1 + 1 / leverage - 0.005) : pos.entryPrice * (1 - 1 / leverage + 0.005));
+    state.liquidationEl.textContent = `Liq: $${Math.round(liqPrice).toLocaleString()}`;
+
+    const marginText = pos.marginUsed ? ` | Margin: $${pos.marginUsed.toFixed(1)}` : '';
+    state.entryEl.textContent = `Giriş: $${pos.entryPrice.toLocaleString()} | Miktar: ${pos.amount}${marginText}`;
+    state.sourceEl.textContent = `⚡ ${this.formatCategory(pos.sourceCategory)}`;
+
+    // Update SL/TP/Liq lines
     if (pos.stopLoss && state.stopLossLine) {
       state.stopLossLine.applyOptions({ price: pos.stopLoss });
     }
     if (pos.takeProfit && state.takeProfitLine) {
       state.takeProfitLine.applyOptions({ price: pos.takeProfit });
+    }
+    if (state.liquidationLine) {
+      state.liquidationLine.applyOptions({ price: liqPrice });
     }
   }
 
@@ -407,12 +484,14 @@ export class PositionsChartManager {
       if (cardState.takeProfitLine) {
         cardState.series.removePriceLine(cardState.takeProfitLine);
       }
+      if (cardState.liquidationLine) {
+        cardState.series.removePriceLine(cardState.liquidationLine);
+      }
       cardState.chart.remove();
     } catch (e) {
       // Ignored
     }
 
-    // Remove from DOM
     if (cardState.cardEl.parentNode) {
       cardState.cardEl.parentNode.removeChild(cardState.cardEl);
     }

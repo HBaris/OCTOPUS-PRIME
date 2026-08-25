@@ -3,7 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import { config } from '../config/index.js';
 import { AgentManager } from '../agents/AgentManager.js';
-import { BinanceService } from '../services/binance/BinanceService.js';
+import { IExchangeService } from '../services/exchange/IExchangeService.js';
 import { NewsRadar } from '../services/news/NewsRadar.js';
 import { KeywordsManager } from '../services/news/KeywordsManager.js';
 import { DecisionEngine } from '../services/decision/DecisionEngine.js';
@@ -19,7 +19,8 @@ import { errorHandler } from './middleware/errorHandler.js';
 
 export interface AppDependencies {
   agentManager: AgentManager;
-  binanceService: BinanceService;
+  exchangeService?: IExchangeService;
+  binanceService?: IExchangeService; // Backward compatibility
   newsRadar: NewsRadar;
   keywordsManager: KeywordsManager;
   decisionEngine: DecisionEngine;
@@ -28,6 +29,10 @@ export interface AppDependencies {
 
 export function createApp(deps: AppDependencies): Express {
   const app = express();
+  const exchange = deps.exchangeService || deps.binanceService;
+  if (!exchange) {
+    throw new Error('Neither exchangeService nor binanceService was provided to createApp.');
+  }
 
   // 1. Security HTTP Headers
   app.use(helmet());
@@ -63,7 +68,7 @@ export function createApp(deps: AppDependencies): Express {
   // 4. API Routes
   app.use('/api/health', createHealthRouter());
   app.use('/api/state', createStateRouter(deps.agentManager));
-  app.use('/api/portfolio', createPortfolioRouter(deps.binanceService));
+  app.use('/api/portfolio', createPortfolioRouter(exchange!));
   app.use('/api/news', createNewsRouter(deps.newsRadar, deps.keywordsManager));
   app.use('/api/signals', createSignalsRouter(deps.decisionEngine));
   app.use('/api/feedback', createFeedbackRouter(deps.feedbackSystem));

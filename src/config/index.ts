@@ -10,10 +10,23 @@ const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   FRONTEND_ORIGIN: z.string().default('http://localhost:5173'),
   
+  // Exchange Provider Selection
+  EXCHANGE_PROVIDER: z.enum(['binance', 'okx']).default('binance'),
+
   // Binance Credentials
   BINANCE_API_KEY: z.string().default(''),
   BINANCE_API_SECRET: z.string().default(''),
   BINANCE_TESTNET: z.preprocess((val) => val === 'true' || val === true, z.boolean()).default(true),
+
+  // OKX Demo Trading Credentials
+  OKX_API_KEY: z.string().default(''),
+  OKX_SECRET: z.string().default(''),
+  OKX_PASSPHRASE: z.string().default(''),
+
+  // Leverage & Margin Settings
+  DEFAULT_LEVERAGE: z.coerce.number().min(1).default(5),
+  DEFAULT_MARGIN_MODE: z.enum(['isolated', 'cross']).default('isolated'),
+  MAX_LEVERAGE_ALLOWED: z.coerce.number().min(1).default(10),
   
   // Trading Safety Limits
   ENABLE_REAL_ORDERS: z.preprocess((val) => val === 'true' || val === true, z.boolean()).default(false),

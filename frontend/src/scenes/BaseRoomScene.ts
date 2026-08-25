@@ -613,25 +613,27 @@ export abstract class BaseRoomScene extends Phaser.Scene {
   }
 
   public showTradeProposal(proposal: TradeProposalPayload): void {
-    const amount = Number(proposal.suggestedAmountUsd || proposal.estimatedAmountUsd || 50);
+    const margin = Number(proposal.suggestedAmountUsd || proposal.estimatedAmountUsd || 50);
+    const leverage = proposal.suggestedLeverage || 5;
+    const posSize = proposal.estimatedPositionSizeUsd || (margin * leverage);
     const side = (proposal.side || 'BUY').toUpperCase() as 'BUY' | 'SELL';
     const symbol = proposal.symbol || 'BTC/USDT';
 
     this.currentProposal = proposal;
-    this.proposalText.setText(`🎩 PATRON KARARI: ${side} ${symbol} ($${amount})`);
+    this.proposalText.setText(`🎩 PATRON: ${side} ${symbol} (${leverage}x Kaldıraç)`);
 
     const slStr = proposal.suggestedStopLoss ? `SL: $${proposal.suggestedStopLoss.toLocaleString()}` : '';
     const tpStr = proposal.suggestedTakeProfit ? `TP: $${proposal.suggestedTakeProfit.toLocaleString()}` : '';
     const catStr = proposal.sourceCategory ? `[${proposal.sourceCategory}]` : '';
 
     this.proposalSubText.setText(
-      [catStr, slStr, tpStr].filter(Boolean).join(' | ') || 'Baş Analist Nihai Onayında'
+      `Margin: $${margin} | Poz. Büyüklüğü: $${posSize} | ${[catStr, slStr, tpStr].filter(Boolean).join(' | ')}`
     );
 
     this.proposalContainer.setVisible(true);
     this.proposalContainer.setAlpha(1);
 
-    this.showBanner(`⚡ PATRON ÖNERİSİ: ${side} ${symbol} ($${amount})`, 3500);
+    this.showBanner(`⚡ PATRON ÖNERİSİ: ${side} ${symbol} (${leverage}x, Margin: $${margin}, Poz: $${posSize})`, 3500);
 
     let remaining = 30;
     this.proposalTimerText.setText(`(${remaining}s)`);

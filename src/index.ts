@@ -4,7 +4,7 @@ import { KeywordsManager } from './services/news/KeywordsManager.js';
 import { SentimentAnalyzer } from './services/news/SentimentAnalyzer.js';
 import { ImpactScorer } from './services/impact/ImpactScorer.js';
 import { NewsRadar } from './services/news/NewsRadar.js';
-import { BinanceService } from './services/binance/BinanceService.js';
+import { getExchangeService } from './services/exchange/ExchangeFactory.js';
 import { CorrelationTracker } from './services/correlation/CorrelationTracker.js';
 import { FeedbackSystem } from './services/feedback/FeedbackSystem.js';
 import { DecisionEngine } from './services/decision/DecisionEngine.js';
@@ -22,19 +22,19 @@ async function bootstrap() {
   const impactScorer = new ImpactScorer();
   const newsRadar = new NewsRadar(keywordsManager, sentimentAnalyzer, impactScorer);
 
-  // 2. Initialize Binance & Trading Services
-  const binanceService = new BinanceService();
-  const correlationTracker = new CorrelationTracker(binanceService, 'correlations.json');
+  // 2. Initialize Exchange Service (Binance or OKX based on config)
+  const exchangeService = getExchangeService();
+  const correlationTracker = new CorrelationTracker(exchangeService, 'correlations.json');
   const feedbackSystem = new FeedbackSystem('feedback.json');
-  const decisionEngine = new DecisionEngine(binanceService, correlationTracker, feedbackSystem);
+  const decisionEngine = new DecisionEngine(exchangeService, correlationTracker, feedbackSystem);
 
-  // 3. Initialize 5 Agent Roles
-  const agentManager = new AgentManager(binanceService, correlationTracker);
+  // 3. Initialize 15 Agent Roles
+  const agentManager = new AgentManager(exchangeService, correlationTracker);
 
   // 4. Create Express HTTP Application
   const app = createApp({
     agentManager,
-    binanceService,
+    exchangeService,
     newsRadar,
     keywordsManager,
     decisionEngine,

@@ -63,6 +63,10 @@ export interface TradeProposalPayload {
   side: 'BUY' | 'SELL';
   suggestedAmountUsd?: number;
   estimatedAmountUsd: number;
+  suggestedLeverage?: number;
+  suggestedMarginMode?: 'isolated' | 'cross';
+  estimatedMarginUsd?: number;
+  estimatedPositionSizeUsd?: number;
   signalScore: number;
   confidence?: number;
   reasoning?: string;
@@ -113,6 +117,10 @@ export interface PortfolioUpdatePayload {
     percentagePnl?: number;
     pnlPercentage?: number;
     side?: 'LONG' | 'SHORT';
+    leverage?: number;
+    marginMode?: 'isolated' | 'cross';
+    liquidationPrice?: number;
+    marginUsed?: number;
     signalId?: string;
     sourceCategory?: string;
     stopLoss?: number;
@@ -129,6 +137,10 @@ export interface OrderSimulatedPayload {
   amount: number;
   price: number;
   totalUsd: number;
+  leverage?: number;
+  marginMode?: 'isolated' | 'cross';
+  liquidationPrice?: number;
+  marginUsed?: number;
   simulatedAt: string;
 }
 
@@ -138,4 +150,16 @@ export interface SpendingLimitWarningPayload {
   maxAllowedSizeUsd: number;
   reason: string;
   actionBlocked: boolean;
+}
+
+export interface LiquidationRiskWarningPayload {
+  symbol: string;
+  side: 'LONG' | 'SHORT';
+  currentPrice: number;
+  liquidationPrice: number;
+  distancePercent: number;
+  leverage: number;
+  marginUsed: number;
+  warningMessage: string;
+  timestamp: string;
 }
