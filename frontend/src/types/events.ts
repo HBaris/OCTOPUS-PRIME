@@ -17,7 +17,8 @@ export type AgentRole =
   | 'Binance İşlemci'
   | 'Risk Analisti'
   | 'Portföy Muhasebecisi'
-  | 'Sinyal Avcısı';
+  | 'Sinyal Avcısı'
+  | 'Patron';
 
 export type AgentState = 'IDLE' | 'ANALYZING' | 'ALERTING' | 'TRADING' | 'SALUTING';
 

@@ -17,6 +17,8 @@ export interface AgentVisualConfig {
   role: AgentRole;
   name: string;
   avatarIcon: string;
+  sceneKey: string;
+  roomTitle: string;
   x: number;
   y: number;
   bodyColor: number;
@@ -30,8 +32,10 @@ export const AGENT_CONFIGS: AgentVisualConfig[] = [
     role: 'Haber Takip',
     name: 'Haber Takip',
     avatarIcon: '📰',
-    x: 180,
-    y: 220,
+    sceneKey: 'NewsRoomScene',
+    roomTitle: 'Haber Odası',
+    x: 480,
+    y: 350,
     bodyColor: 0x3b82f6, // Blue
     hairColor: 0x1e293b,
     shirtColor: 0x60a5fa,
@@ -41,8 +45,10 @@ export const AGENT_CONFIGS: AgentVisualConfig[] = [
     role: 'Binance İşlemci',
     name: 'Binance İşlemci',
     avatarIcon: '🤖',
+    sceneKey: 'TraderRoomScene',
+    roomTitle: 'İşlem Odası',
     x: 480,
-    y: 220,
+    y: 350,
     bodyColor: 0xf59e0b, // Amber / Binance Gold
     hairColor: 0x0f172a,
     shirtColor: 0xfbbf24,
@@ -52,8 +58,10 @@ export const AGENT_CONFIGS: AgentVisualConfig[] = [
     role: 'Risk Analisti',
     name: 'Risk Analisti',
     avatarIcon: '🛡️',
-    x: 780,
-    y: 220,
+    sceneKey: 'RiskRoomScene',
+    roomTitle: 'Risk Odası',
+    x: 480,
+    y: 350,
     bodyColor: 0x10b981, // Emerald Green
     hairColor: 0x334155,
     shirtColor: 0x34d399,
@@ -63,8 +71,10 @@ export const AGENT_CONFIGS: AgentVisualConfig[] = [
     role: 'Portföy Muhasebecisi',
     name: 'Portföy',
     avatarIcon: '💰',
-    x: 320,
-    y: 430,
+    sceneKey: 'PortfolioRoomScene',
+    roomTitle: 'Portföy Odası',
+    x: 480,
+    y: 350,
     bodyColor: 0x8b5cf6, // Violet
     hairColor: 0x4c1d95,
     shirtColor: 0xa78bfa,
@@ -74,12 +84,27 @@ export const AGENT_CONFIGS: AgentVisualConfig[] = [
     role: 'Sinyal Avcısı',
     name: 'Sinyal Avcısı',
     avatarIcon: '⚡',
-    x: 640,
-    y: 430,
+    sceneKey: 'SignalsRoomScene',
+    roomTitle: 'Sinyal Odası',
+    x: 480,
+    y: 350,
     bodyColor: 0xec4899, // Pink / Fuchsia
     hairColor: 0x831843,
     shirtColor: 0xf472b6,
     deskColor: 0x334155,
+  },
+  {
+    role: 'Patron',
+    name: 'Patron (Baş Analist)',
+    avatarIcon: '🎩',
+    sceneKey: 'PatronRoomScene',
+    roomTitle: 'Yönetim Odası',
+    x: 480,
+    y: 350,
+    bodyColor: 0xf59e0b, // Gold tie / accessory
+    hairColor: 0x475569, // Silver-grey / refined
+    shirtColor: 0x1e3a8a, // Deep Navy Suit
+    deskColor: 0x78350f, // Mahogany luxury wood
   },
 ];
 

@@ -65,6 +65,15 @@ export class AgentManager {
         lastActive: new Date().toISOString(),
         stats: { actionsCount: 0, customMetric: '0 sinyal üretildi' },
       },
+      [AgentRole.PATRON]: {
+        role: AgentRole.PATRON,
+        name: 'Patron',
+        avatarIcon: '🎩',
+        state: AgentState.IDLE,
+        currentTask: 'Ekip raporları ve nihai işlem kararları koordine ediliyor',
+        lastActive: new Date().toISOString(),
+        stats: { actionsCount: 0, customMetric: '0 nihai karar' },
+      },
     };
 
     this.initEventListeners();
@@ -164,6 +173,26 @@ export class AgentManager {
         `Bakiye: $${p.totalBalanceUsd.toFixed(2)} | PnL: $${p.totalUnrealizedPnl.toFixed(2)}`
       );
       this.agents[AgentRole.PORTFOLIO_ACCOUNTANT].stats.customMetric = `PnL: $${p.totalUnrealizedPnl.toFixed(2)}`;
+    });
+
+    // 7. Patron on TRADE_PROPOSAL
+    eventBus.on(EventType.TRADE_PROPOSAL, (event) => {
+      const p = event.payload;
+      const details = `${p.symbol} için ${p.side} kararı onaylandı (Skor: ${p.signalScore})`;
+      this.updateAgentState(
+        AgentRole.PATRON,
+        AgentState.TRADING,
+        details
+      );
+      this.agents[AgentRole.PATRON].stats.actionsCount++;
+      this.agents[AgentRole.PATRON].stats.customMetric = `${this.agents[AgentRole.PATRON].stats.actionsCount} nihai karar`;
+
+      this.emitAgentAction(
+        AgentRole.PATRON,
+        'Nihai Karar',
+        'COMPLETED',
+        details
+      );
     });
   }
 

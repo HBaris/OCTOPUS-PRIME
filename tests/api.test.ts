@@ -49,13 +49,14 @@ describe('REST API Endpoints', () => {
     expect(res.body.status).toBe('ok');
   });
 
-  it('GET /api/state should return system and 5 agent states', async () => {
+  it('GET /api/state should return system and 6 agent states', async () => {
     const res = await request(app).get('/api/state');
     expect(res.status).toBe(200);
     expect(res.body).toHaveProperty('agents');
     expect(res.body).toHaveProperty('currentSceneSeverity');
     expect(res.body).toHaveProperty('portfolioSummary');
-    expect(Object.keys(res.body.agents).length).toBe(5);
+    expect(Object.keys(res.body.agents).length).toBe(6);
+    expect(res.body.agents).toHaveProperty('Patron');
   });
 
   it('GET /api/portfolio should return balance and positions', async () => {

@@ -8,6 +8,7 @@ export enum AgentRole {
   RISK_ANALYST = 'Risk Analisti',
   PORTFOLIO_ACCOUNTANT = 'Portföy Muhasebecisi',
   SIGNAL_HUNTER = 'Sinyal Avcısı',
+  PATRON = 'Patron',
 }
 
 export enum AgentState {
