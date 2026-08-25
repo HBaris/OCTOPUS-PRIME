@@ -15,27 +15,21 @@ export class PortfolioRoomScene extends BaseRoomScene {
     const ethCfg = AGENT_CONFIGS.find((a) => a.role === 'ETH Analisti')!;
     const solCfg = AGENT_CONFIGS.find((a) => a.role === 'SOL Analisti')!;
 
-    // Portfolio Decor: Heavy Gold Vault & Asset Screens
-    this.add.image(480, 220, 'portfolio_vault');
-    this.add.image(60, 240, 'plant_texture');
-    this.add.image(900, 240, 'cooler_texture');
+    // Portfolio Decor: Wall Vault & Grounded Floor Furniture
+    this.add.image(480, 160, 'portfolio_vault');
+    this.add.image(60, 410, 'plant_texture');
+    this.add.image(900, 410, 'cooler_texture');
 
-    this.add.text(480, 275, '💰 USDT KASASI, TEMİNAT VE KRİPTO ANALİZLERİ', {
+    this.add.text(480, 205, '💰 USDT KASASI, TEMİNAT VE KRİPTO ANALİZLERİ', {
       fontFamily: 'monospace',
       fontSize: '10px',
       color: '#a78bfa',
     }).setOrigin(0.5);
 
-    // 1. Portföy Muhasebecisi (Top-Left)
-    this.createAgentCharacter(portCfg, 200, 320);
-
-    // 2. SOL Analisti (Top-Right)
-    this.createAgentCharacter(solCfg, 760, 320);
-
-    // 3. BTC Analisti (Bottom-Left)
-    this.createAgentCharacter(btcCfg, 380, 460);
-
-    // 4. ETH Analisti (Bottom-Right)
-    this.createAgentCharacter(ethCfg, 580, 460);
+    // 4 Workstations lined up across the floor
+    this.createAgentCharacter(portCfg, 160, 380);
+    this.createAgentCharacter(btcCfg, 370, 380);
+    this.createAgentCharacter(ethCfg, 580, 380);
+    this.createAgentCharacter(solCfg, 790, 380);
   }
 }

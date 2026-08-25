@@ -14,14 +14,14 @@ export class NewsRoomScene extends BaseRoomScene {
     const macroCfg = AGENT_CONFIGS.find((a) => a.role === 'Makro Ekonomist')!;
     const regCfg = AGENT_CONFIGS.find((a) => a.role === 'Düzenleyici İzleyici')!;
 
-    // Newsroom Decor: Whiteboards, TV Screens, Server Racks
-    this.add.image(480, 220, 'news_board');
-    this.add.image(60, 240, 'server_rack');
-    this.add.image(900, 240, 'server_rack');
-    this.add.image(300, 220, 'plant_texture');
-    this.add.image(660, 220, 'cooler_texture');
+    // Newsroom Decor: Wall Whiteboards & Grounded Floor Furniture
+    this.add.image(480, 160, 'news_board');
+    this.add.image(60, 410, 'server_rack');
+    this.add.image(900, 410, 'server_rack');
+    this.add.image(70, 410, 'plant_texture');
+    this.add.image(890, 410, 'cooler_texture');
 
-    this.add.text(480, 270, '📰 KÜRESEL BASIN & HABER ANALİZ MERKEZİ', {
+    this.add.text(480, 205, '📰 KÜRESEL BASIN & HABER ANALİZ MERKEZİ', {
       fontFamily: 'monospace',
       fontSize: '10px',
       color: '#38bdf8',

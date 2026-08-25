@@ -3,17 +3,12 @@ import { APP_CONFIG, AgentVisualConfig, ROOMS, SEVERITY_COLORS } from '../config
 import { AgentRole, AgentState, SceneSeverity, TradeProposalPayload } from '../types/events.ts';
 import { gameState } from '../services/gameState.ts';
 import { apiService } from '../services/api.ts';
+import { PixelCharacterGenerator } from '../utils/pixelCharacterGenerator.ts';
 
 export interface RoomCharacterEntity {
   config: AgentVisualConfig;
   container: Phaser.GameObjects.Container;
-  bodySprite: Phaser.GameObjects.Rectangle;
-  headSprite: Phaser.GameObjects.Rectangle;
-  leftArm: Phaser.GameObjects.Rectangle;
-  rightArm: Phaser.GameObjects.Rectangle;
-  leftHand: Phaser.GameObjects.Rectangle;
-  rightHand: Phaser.GameObjects.Rectangle;
-  mouthGraphics: Phaser.GameObjects.Graphics;
+  characterSprite: Phaser.GameObjects.Image;
   stateText: Phaser.GameObjects.Text;
   bubbleContainer: Phaser.GameObjects.Container;
   bubbleBg: Phaser.GameObjects.Graphics;
@@ -23,7 +18,6 @@ export interface RoomCharacterEntity {
   warningBadge: Phaser.GameObjects.Container;
   confidenceBadge?: Phaser.GameObjects.Container;
   confidenceText?: Phaser.GameObjects.Text;
-  typingTween?: Phaser.Tweens.Tween;
   dialogueQueue: string[];
   isSpeaking: boolean;
 }
@@ -82,29 +76,53 @@ export abstract class BaseRoomScene extends Phaser.Scene {
 
   protected abstract createRoomContent(): void;
 
+  // ==========================================
+  // 1. CLASSIC 2D SIDE-VIEW OFFICE ENVIRONMENT
+  // ==========================================
   private createRoomBaseEnvironment(): void {
     const { GAME_WIDTH, GAME_HEIGHT } = APP_CONFIG;
 
-    // Wall (Top 140px)
+    // A. Wall (Top to Floor): Warm Acoustic Wood Slats & Brick Details
     for (let x = 0; x < GAME_WIDTH; x += 32) {
-      for (let y = 0; y < 140; y += 32) {
+      for (let y = 0; y < 450; y += 32) {
         this.add.image(x + 16, y + 16, 'wall_tile');
       }
     }
 
-    // Floor (From 140px down)
+    // B. Large Office Windows on Wall (x=220 and x=740)
+    const win1 = this.add.image(220, 120, 'office_window');
+    const win2 = this.add.image(740, 120, 'office_window');
+
+    // Subtle window light shimmer
+    this.tweens.add({
+      targets: [win1, win2],
+      alpha: 0.92,
+      duration: 3000,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
+
+    // C. Baseboard / Skirting Board (Süpürgelik) at wall-floor boundary
+    const baseboard = this.add.graphics();
+    baseboard.fillStyle(0x1e1b18, 1);
+    baseboard.fillRect(0, 442, GAME_WIDTH, 8);
+    baseboard.fillStyle(0x362c24, 1);
+    baseboard.fillRect(0, 442, GAME_WIDTH, 2);
+
+    // D. Floor (From 450px down): Warm Parquet Wood Tiles
     for (let x = 0; x < GAME_WIDTH; x += 32) {
-      for (let y = 140; y < GAME_HEIGHT; y += 32) {
+      for (let y = 450; y < GAME_HEIGHT; y += 32) {
         this.add.image(x + 16, y + 16, 'floor_tile');
       }
     }
 
-    // Wall Divider Line
-    const divider = this.add.graphics();
-    divider.lineStyle(4, 0x334155);
-    divider.lineBetween(0, 140, GAME_WIDTH, 140);
+    // E. Wall-Floor Contact Shadow
+    const wallShadow = this.add.graphics();
+    wallShadow.fillStyle(0x000000, 0.4);
+    wallShadow.fillRect(0, 450, GAME_WIDTH, 10);
 
-    // Large High-Contrast Room Signboard Header
+    // F. Large High-Contrast Room Signboard Header
     const signBg = this.add.rectangle(GAME_WIDTH / 2, 54, 380, 32, 0x0f172a, 0.98);
     signBg.setStrokeStyle(2, 0x38bdf8);
     this.add.text(GAME_WIDTH / 2, 54, `🏢 ${this.roomName.toUpperCase()}`, {
@@ -115,93 +133,54 @@ export abstract class BaseRoomScene extends Phaser.Scene {
   }
 
   // ==========================================
-  // ENHANCED PROCEDURAL CHARACTER FACTORY (+50% SCALE)
+  // 2. UNIFIED SIDE-VIEW WORKSTATION FACTORY
   // ==========================================
   protected createAgentCharacter(config: AgentVisualConfig, x: number, y: number): RoomCharacterEntity {
-    // 1. Desk Drop Shadow
-    const isPatron = config.role === 'Patron';
-    this.add.image(x, y + 46, 'desk_shadow');
+    // Layer 1: Ceiling Spotlight Soft Radial Glow on Workstation
+    const spotlight = this.add.graphics();
+    spotlight.fillStyle(0xfde047, 0.04);
+    spotlight.fillCircle(x, y - 5, 95);
 
-    // 2. Chair
-    const chairTexture = isPatron ? 'patron_chair' : 'chair_texture';
-    this.add.image(x, y - 14, chairTexture);
+    // Layer 2: Complete Unified 3/4 Diagonal Workstation (128x112)
+    const agentContainer = this.add.container(x, y);
 
-    // 3. Desk
-    const deskTexture = isPatron ? 'patron_desk' : 'desk_texture';
-    const desk = this.add.image(x, y + 22, deskTexture);
+    const initialTexture = PixelCharacterGenerator.getTextureKey(config.role, 'IDLE');
+    const characterSprite = this.add.image(0, 0, initialTexture).setScale(1.15);
+    characterSprite.setInteractive({ useHandCursor: true });
 
-    // 4. Monitor / Workstation Screen
-    const monitor = this.add.image(x, y + 10, 'monitor_texture');
+    agentContainer.add(characterSprite);
+
+    // Natural Idle Breathing
     this.tweens.add({
-      targets: monitor,
-      scaleY: 1.04,
-      duration: 1200 + Math.random() * 500,
+      targets: characterSprite,
+      scaleY: 1.165,
+      duration: 1400 + Math.random() * 300,
       yoyo: true,
       repeat: -1,
+      ease: 'Sine.easeInOut',
     });
 
-    // 5. Container
-    const agentContainer = this.add.container(x, y - 20);
+    // Layer 3: HUD Tags & Speech Bubble
+    const overlayContainer = this.add.container(x, y);
 
-    // Body (24x22 enlarged)
-    const body = this.add.rectangle(0, 10, 24, 22, config.shirtColor);
-    body.setStrokeStyle(1.5, 0x0f172a);
-
-    const collar = this.add.rectangle(0, 0, 10, 5, config.bodyColor);
-    const accessory = this.add.rectangle(0, 8, 5, 10, config.bodyColor);
-
-    // Arms & Hands (Distinct)
-    const leftArm = this.add.rectangle(-16, 9, 8, 16, config.shirtColor);
-    leftArm.setStrokeStyle(1.5, 0x0f172a);
-    const leftHand = this.add.rectangle(-16, 18, 7, 7, 0xfed7aa);
-    leftHand.setStrokeStyle(1.5, 0x0f172a);
-
-    const rightArm = this.add.rectangle(16, 9, 8, 16, config.shirtColor);
-    rightArm.setStrokeStyle(1.5, 0x0f172a);
-    const rightHand = this.add.rectangle(16, 18, 7, 7, 0xfed7aa);
-    rightHand.setStrokeStyle(1.5, 0x0f172a);
-
-    // Head & Hair (22x18 enlarged)
-    const head = this.add.rectangle(0, -9, 22, 18, 0xfed7aa);
-    head.setStrokeStyle(1.5, 0x0f172a);
-
-    const hair = this.add.rectangle(0, -18, 24, 9, config.hairColor);
-    const hairLeft = this.add.rectangle(-11, -11, 4, 8, config.hairColor);
-    const hairRight = this.add.rectangle(11, -11, 4, 8, config.hairColor);
-
-    // Eyes (3x4 with highlight)
-    const leftEye = this.add.rectangle(-5, -10, 3, 4, 0x0f172a);
-    const leftEyeLight = this.add.rectangle(-5, -11, 1.5, 1.5, 0xffffff);
-    const rightEye = this.add.rectangle(5, -10, 3, 4, 0x0f172a);
-    const rightEyeLight = this.add.rectangle(5, -11, 1.5, 1.5, 0xffffff);
-
-    // Dynamic Facial Expression
-    const mouthGraphics = this.add.graphics();
-    this.drawMouth(mouthGraphics, 'IDLE');
-
-    // Emoji Badge (+50% font)
-    const emojiBadge = this.add.text(0, -34, config.avatarIcon, {
-      fontSize: '20px',
-    }).setOrigin(0.5);
-
-    // Role Tag (+50% font)
-    const roleTagBg = this.add.rectangle(0, 58, 140, 20, 0x0f172a, 0.95);
+    // Role Tag (Placed cleanly under desk foot)
+    const roleTagBg = this.add.rectangle(0, 72, 145, 22, 0x0f172a, 0.95);
     roleTagBg.setStrokeStyle(1.5, config.shirtColor);
-    const roleText = this.add.text(0, 58, config.name, {
+    const roleText = this.add.text(0, 72, `${config.avatarIcon} ${config.name}`, {
       fontFamily: 'monospace',
       fontSize: '11px',
       color: '#f8fafc',
     }).setOrigin(0.5);
 
-    // State Pill (+50% font)
-    const stateText = this.add.text(0, 76, '● IDLE', {
+    // State Pill
+    const stateText = this.add.text(0, 92, '● IDLE', {
       fontFamily: 'monospace',
       fontSize: '10px',
       color: '#10b981',
     }).setOrigin(0.5);
 
-    // Speech Bubble (+50% scale, 210x48)
-    const bubbleContainer = this.add.container(0, -82);
+    // Speech Bubble (210x48) - Positioned cleanly over workstation
+    const bubbleContainer = this.add.container(0, -78);
     const bubbleBg = this.add.graphics();
     this.drawBubble(bubbleBg, 210, 48);
     const bubbleText = this.add.text(0, -4, 'Hazırda bekliyor', {
@@ -225,12 +204,12 @@ export abstract class BaseRoomScene extends Phaser.Scene {
       repeat: -1,
     });
 
-    const tradeIcon = this.add.image(22, -56, 'trading_badge');
+    const tradeIcon = this.add.image(26, -56, 'trading_badge');
     tradeIcon.setVisible(false);
 
-    const warningBadge = this.add.container(0, -60);
+    const warningBadge = this.add.container(0, -62);
     const stopImg = this.add.image(0, 0, 'warning_stop');
-    const stopText = this.add.text(0, -20, 'LİMİT AŞIMI!', {
+    const stopText = this.add.text(0, -18, 'LİMİT AŞIMI!', {
       fontFamily: 'monospace',
       fontSize: '10px',
       color: '#ef4444',
@@ -238,24 +217,7 @@ export abstract class BaseRoomScene extends Phaser.Scene {
     warningBadge.add([stopImg, stopText]);
     warningBadge.setVisible(false);
 
-    agentContainer.add([
-      leftArm,
-      leftHand,
-      rightArm,
-      rightHand,
-      body,
-      collar,
-      accessory,
-      head,
-      hair,
-      hairLeft,
-      hairRight,
-      leftEye,
-      leftEyeLight,
-      rightEye,
-      rightEyeLight,
-      mouthGraphics,
-      emojiBadge,
+    overlayContainer.add([
       roleTagBg,
       roleText,
       stateText,
@@ -265,22 +227,12 @@ export abstract class BaseRoomScene extends Phaser.Scene {
       bubbleContainer,
     ]);
 
-    // Idle Breathing
-    this.tweens.add({
-      targets: [head, hair, hairLeft, hairRight, leftEye, leftEyeLight, rightEye, rightEyeLight, mouthGraphics, emojiBadge],
-      y: '-=3',
-      duration: 1100 + Math.random() * 300,
-      yoyo: true,
-      repeat: -1,
-      ease: 'Sine.easeInOut',
-    });
-
-    // Special Confidence Badge
+    // Special Confidence Badge for Risk Analyst
     let confidenceBadge: Phaser.GameObjects.Container | undefined;
     let confidenceText: Phaser.GameObjects.Text | undefined;
 
     if (config.role === 'Risk Analisti') {
-      confidenceBadge = this.add.container(x + 50, y - 36);
+      confidenceBadge = this.add.container(x + 58, y - 24);
       const cBg = this.add.rectangle(0, 0, 48, 20, 0x064e3b, 0.95);
       cBg.setStrokeStyle(1.5, 0x10b981);
       confidenceText = this.add.text(0, 0, '%75', {
@@ -291,20 +243,14 @@ export abstract class BaseRoomScene extends Phaser.Scene {
       confidenceBadge.add([cBg, confidenceText]);
     }
 
-    desk.setInteractive({ useHandCursor: true }).on('pointerdown', () => {
+    characterSprite.on('pointerdown', () => {
       this.showBanner(`${config.avatarIcon} ${config.role}: [${stateText.text}]`);
     });
 
     const entity: RoomCharacterEntity = {
       config,
       container: agentContainer,
-      bodySprite: body,
-      headSprite: head,
-      leftArm,
-      rightArm,
-      leftHand,
-      rightHand,
-      mouthGraphics,
+      characterSprite,
       stateText,
       bubbleContainer,
       bubbleBg,
@@ -322,53 +268,15 @@ export abstract class BaseRoomScene extends Phaser.Scene {
     return entity;
   }
 
-  protected drawMouth(graphics: Phaser.GameObjects.Graphics, state: AgentState): void {
-    graphics.clear();
-    switch (state) {
-      case 'IDLE':
-        graphics.lineStyle(1.5, 0x334155, 1);
-        graphics.lineBetween(-4, -4, 4, -4);
-        break;
-      case 'ANALYZING':
-        graphics.lineStyle(2, 0x1e293b, 1);
-        graphics.lineBetween(-4, -3, 3, -5);
-        break;
-      case 'ALERTING':
-        graphics.fillStyle(0x991b1b, 1);
-        graphics.fillCircle(0, -4, 3.5);
-        graphics.lineStyle(1.5, 0x0f172a, 1);
-        graphics.strokeCircle(0, -4, 3.5);
-        break;
-      case 'TRADING':
-        graphics.lineStyle(2, 0x047857, 1);
-        graphics.beginPath();
-        graphics.arc(0, -6, 4.5, 0.15 * Math.PI, 0.85 * Math.PI, false);
-        graphics.strokePath();
-        break;
-      case 'SALUTING':
-        graphics.fillStyle(0x0f172a, 1);
-        graphics.fillCircle(0, -4, 4);
-        graphics.fillStyle(0xffffff, 1);
-        graphics.fillRect(-3, -6, 6, 2);
-        break;
-    }
-  }
-
   public setAgentStateInRoom(role: AgentRole, state: AgentState, taskDescription?: string): void {
     const agent = this.agentsInRoom.get(role);
     if (!agent) return;
 
-    this.drawMouth(agent.mouthGraphics, state);
+    // Dynamically switch handcrafted unified side-view workstation sprite for state
+    agent.characterSprite.setTexture(PixelCharacterGenerator.getTextureKey(role, state));
+
     agent.alertIcon.setVisible(false);
     agent.tradeIcon.setVisible(false);
-
-    if (agent.typingTween) {
-      agent.typingTween.stop();
-      agent.typingTween = undefined;
-      agent.leftHand.setY(18);
-      agent.rightHand.setY(18);
-      agent.rightArm.setY(9);
-    }
 
     switch (state) {
       case 'IDLE':
@@ -376,14 +284,6 @@ export abstract class BaseRoomScene extends Phaser.Scene {
         break;
       case 'ANALYZING':
         agent.stateText.setText('⚙ ANALYZING').setColor('#38bdf8');
-        agent.typingTween = this.tweens.add({
-          targets: [agent.leftHand, agent.rightHand],
-          y: '-=3',
-          duration: 160,
-          yoyo: true,
-          repeat: -1,
-          ease: 'Sine.easeInOut',
-        });
         if (taskDescription && !agent.isSpeaking) {
           this.queueAgentDialogue(role, taskDescription);
         }
@@ -398,22 +298,12 @@ export abstract class BaseRoomScene extends Phaser.Scene {
       case 'TRADING':
         agent.stateText.setText('⚡ TRADING').setColor('#f59e0b');
         agent.tradeIcon.setVisible(true);
-        agent.typingTween = this.tweens.add({
-          targets: [agent.leftHand, agent.rightHand],
-          y: '-=4',
-          duration: 120,
-          yoyo: true,
-          repeat: -1,
-          ease: 'Sine.easeInOut',
-        });
         if (taskDescription && !agent.isSpeaking) {
           this.queueAgentDialogue(role, taskDescription);
         }
         break;
       case 'SALUTING':
         agent.stateText.setText('👋 SELAM').setColor('#ec4899');
-        agent.rightHand.setY(8);
-        agent.rightArm.setY(4);
         break;
     }
   }
@@ -443,7 +333,7 @@ export abstract class BaseRoomScene extends Phaser.Scene {
     this.tweens.add({
       targets: agent.bubbleContainer,
       alpha: 1,
-      y: -88,
+      y: -74,
       duration: 250,
       ease: 'Back.easeOut',
     });
@@ -452,7 +342,7 @@ export abstract class BaseRoomScene extends Phaser.Scene {
       this.tweens.add({
         targets: agent.bubbleContainer,
         alpha: 0,
-        y: -82,
+        y: -68,
         duration: 300,
         onComplete: () => {
           agent.bubbleContainer.setVisible(false);
@@ -479,7 +369,7 @@ export abstract class BaseRoomScene extends Phaser.Scene {
   }
 
   // ==========================================
-  // HUD, NAVIGATION & MINI-MAP (KROKİ)
+  // 3. HUD, NAVIGATION & MINI-MAP (KROKİ)
   // ==========================================
   private createHUD(): void {
     const { GAME_WIDTH } = APP_CONFIG;
@@ -848,7 +738,7 @@ export abstract class BaseRoomScene extends Phaser.Scene {
   }
 
   // ==========================================
-  // STATE SYNC & SUBSCRIPTIONS
+  // 4. STATE SYNC & SUBSCRIPTIONS
   // ==========================================
   private bindGameStateEvents(): void {
     this.unsubs.push(

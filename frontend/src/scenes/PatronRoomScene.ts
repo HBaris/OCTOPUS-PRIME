@@ -17,29 +17,29 @@ export class PatronRoomScene extends BaseRoomScene {
     const patronCfg = AGENT_CONFIGS.find((a) => a.role === 'Patron')!;
     const secCfg = AGENT_CONFIGS.find((a) => a.role === 'Sekreterya')!;
 
-    // Executive Suite Decor: Luxury Mahogany Decision Board & Status Displays
-    this.add.image(220, 230, 'patron_summary_board');
-    this.add.image(740, 230, 'news_board');
-    this.add.image(60, 240, 'plant_texture');
-    this.add.image(900, 240, 'cooler_texture');
+    // Executive Suite Decor: Wall Decision Boards & Floor Furniture
+    this.add.image(220, 160, 'patron_summary_board');
+    this.add.image(740, 160, 'news_board');
+    this.add.image(60, 410, 'plant_texture');
+    this.add.image(900, 410, 'cooler_texture');
 
-    this.add.text(220, 280, '🎩 NİHAİ KARAR MASASI', {
+    this.add.text(220, 205, '🎩 NİHAİ KARAR MASASI', {
       fontFamily: 'monospace',
       fontSize: '10px',
       color: '#fbbf24',
     }).setOrigin(0.5);
 
-    this.add.text(740, 280, '📋 OPERASYON KAYITLARI', {
+    this.add.text(740, 205, '📋 OPERASYON KAYITLARI', {
       fontFamily: 'monospace',
       fontSize: '10px',
       color: '#94a3b8',
     }).setOrigin(0.5);
 
     // 1. Patron Character at Grand Mahogany Desk (Left-Center)
-    this.createAgentCharacter(patronCfg, 360, 380);
+    this.createAgentCharacter(patronCfg, 320, 380);
 
     // 2. Sekreterya Character at Office Workstation (Right-Center)
-    this.createAgentCharacter(secCfg, 680, 380);
+    this.createAgentCharacter(secCfg, 640, 380);
 
     // Listen to TRADE_PROPOSAL for Patron's executive voice
     this.wsUnsub = wsService.on<TradeProposalPayload>('TRADE_PROPOSAL', (payload) => {

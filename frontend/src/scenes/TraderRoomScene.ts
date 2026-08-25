@@ -13,26 +13,26 @@ export class TraderRoomScene extends BaseRoomScene {
     const traderCfg = AGENT_CONFIGS.find((a) => a.role === 'Binance İşlemci')!;
     const liqCfg = AGENT_CONFIGS.find((a) => a.role === 'Likidite Gözlemcisi')!;
 
-    // Trading Floor Decor: Multi-screen Wall & Terminal Racks
-    this.add.image(340, 220, 'trader_screens');
-    this.add.image(640, 220, 'trader_screens');
-    this.add.image(60, 240, 'server_rack');
-    this.add.image(900, 240, 'cooler_texture');
+    // Trading Floor Decor: Wall Screens & Grounded Floor Furniture
+    this.add.image(320, 160, 'trader_screens');
+    this.add.image(640, 160, 'trader_screens');
+    this.add.image(60, 410, 'server_rack');
+    this.add.image(900, 410, 'cooler_texture');
 
-    this.add.text(340, 270, '📈 CCXT TESTNET EMİR İLETİMİ', {
+    this.add.text(320, 205, '📈 CCXT TESTNET EMİR İLETİMİ', {
       fontFamily: 'monospace',
       fontSize: '10px',
       color: '#f59e0b',
     }).setOrigin(0.5);
 
-    this.add.text(640, 270, '💧 DERİNLİK VE LİKİDİTE KONTROLÜ', {
+    this.add.text(640, 205, '💧 DERİNLİK VE LİKİDİTE KONTROLÜ', {
       fontFamily: 'monospace',
       fontSize: '10px',
       color: '#06b6d4',
     }).setOrigin(0.5);
 
     // 1. Binance İşlemci Character (Left Desk)
-    this.createAgentCharacter(traderCfg, 340, 380);
+    this.createAgentCharacter(traderCfg, 320, 380);
 
     // 2. Likidite Gözlemcisi Character (Right Desk)
     this.createAgentCharacter(liqCfg, 640, 380);

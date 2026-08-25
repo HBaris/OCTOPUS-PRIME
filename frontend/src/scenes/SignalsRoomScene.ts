@@ -18,28 +18,28 @@ export class SignalsRoomScene extends BaseRoomScene {
     const sigCfg = AGENT_CONFIGS.find((a) => a.role === 'Sinyal Avcısı')!;
     const techCfg = AGENT_CONFIGS.find((a) => a.role === 'Teknik Analist')!;
 
-    // Room Decor: Radar Station, Technical Oscillators, Servers
-    this.add.image(340, 220, 'signal_radar_station');
-    this.add.image(640, 220, 'trader_screens');
-    this.add.image(60, 240, 'server_rack');
-    this.add.image(900, 240, 'server_rack');
+    // Radar Bunker Decor: Wall Radar Displays & Grounded Floor Furniture
+    this.add.image(320, 160, 'signal_radar_station');
+    this.add.image(640, 160, 'trader_screens');
+    this.add.image(60, 410, 'server_rack');
+    this.add.image(900, 410, 'plant_texture');
 
-    this.add.text(340, 270, '⚡ ANLIK SİNYAL RADARI (ALİ)', {
+    this.add.text(320, 205, '⚡ HABER SKORU & DERİN SENTİMENT', {
       fontFamily: 'monospace',
       fontSize: '10px',
       color: '#ec4899',
     }).setOrigin(0.5);
 
-    this.add.text(640, 270, '📐 MOMENTUM VE GRAFİK İNCELEMESİ', {
+    this.add.text(640, 205, '📊 TEKNİK GRAFİK FORMASYONLARI', {
       fontFamily: 'monospace',
       fontSize: '10px',
-      color: '#a5b4fc',
+      color: '#6366f1',
     }).setOrigin(0.5);
 
-    // 1. Sinyal Avcısı (Ali) Character (Left Desk)
-    this.createAgentCharacter(sigCfg, 340, 380);
+    // 1. Sinyal Avcısı Ali (Left Desk)
+    this.createAgentCharacter(sigCfg, 320, 380);
 
-    // 2. Teknik Analist Character (Right Desk)
+    // 2. Teknik Analist (Right Desk)
     this.createAgentCharacter(techCfg, 640, 380);
 
     // Listen to SIGNAL_GENERATED for Ali's speech queue
