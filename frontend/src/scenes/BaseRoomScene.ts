@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { APP_CONFIG, AgentVisualConfig, SEVERITY_COLORS } from '../config.ts';
+import { APP_CONFIG, AgentVisualConfig, ROOMS, SEVERITY_COLORS } from '../config.ts';
 import { AgentRole, AgentState, SceneSeverity, TradeProposalPayload } from '../types/events.ts';
 import { gameState } from '../services/gameState.ts';
 import { apiService } from '../services/api.ts';
@@ -24,13 +24,15 @@ export interface RoomCharacterEntity {
   confidenceBadge?: Phaser.GameObjects.Container;
   confidenceText?: Phaser.GameObjects.Text;
   typingTween?: Phaser.Tweens.Tween;
+  dialogueQueue: string[];
+  isSpeaking: boolean;
 }
 
 export abstract class BaseRoomScene extends Phaser.Scene {
-  protected abstract agentRole: AgentRole;
+  protected abstract roomKey: string;
   protected abstract roomName: string;
 
-  protected characterEntity: RoomCharacterEntity | null = null;
+  protected agentsInRoom: Map<AgentRole, RoomCharacterEntity> = new Map();
   private severityOverlay!: Phaser.GameObjects.Rectangle;
   private severityTween: Phaser.Tweens.Tween | null = null;
 
@@ -42,6 +44,10 @@ export abstract class BaseRoomScene extends Phaser.Scene {
   private severityText!: Phaser.GameObjects.Text;
   private tickerText!: Phaser.GameObjects.Text;
 
+  // Mini-Map Elements
+  private miniMapContainer!: Phaser.GameObjects.Container;
+  private miniMapDots: Map<string, Phaser.GameObjects.Arc> = new Map();
+
   // Notification & Trade Proposal Banners
   private bannerContainer!: Phaser.GameObjects.Container;
   private bannerText!: Phaser.GameObjects.Text;
@@ -52,24 +58,22 @@ export abstract class BaseRoomScene extends Phaser.Scene {
   private proposalExpiryTimer: Phaser.Time.TimerEvent | null = null;
   private currentProposal: TradeProposalPayload | null = null;
 
-  // Dialogue Queue
-  private dialogueQueue: string[] = [];
-  private isSpeaking = false;
   private unsubs: Array<() => void> = [];
 
   create(): void {
-    this.cameras.main.fadeIn(300, 11, 15, 25);
+    this.cameras.main.fadeIn(250, 11, 15, 25);
 
     this.createRoomBaseEnvironment();
     this.createAtmosphereOverlay();
     this.createHUD();
-    this.createReturnButton();
+    this.createNavigationControls();
+    this.createMiniMap();
     this.createBarisButton();
     this.createTradeProposalBanner();
     this.createNotificationBanner();
     this.createEventTicker();
 
-    // Call subclass specific room builder
+    // Call subclass specific multi-character room builder
     this.createRoomContent();
 
     this.bindGameStateEvents();
@@ -100,131 +104,135 @@ export abstract class BaseRoomScene extends Phaser.Scene {
     divider.lineStyle(4, 0x334155);
     divider.lineBetween(0, 140, GAME_WIDTH, 140);
 
-    // Room Signboard Header
-    const signBg = this.add.rectangle(GAME_WIDTH / 2, 54, 300, 26, 0x0f172a, 0.95);
+    // Large High-Contrast Room Signboard Header
+    const signBg = this.add.rectangle(GAME_WIDTH / 2, 54, 380, 32, 0x0f172a, 0.98);
     signBg.setStrokeStyle(2, 0x38bdf8);
     this.add.text(GAME_WIDTH / 2, 54, `🏢 ${this.roomName.toUpperCase()}`, {
       fontFamily: 'monospace',
-      fontSize: '11px',
+      fontSize: '13px',
       color: '#38bdf8',
     }).setOrigin(0.5);
   }
 
-  protected createAgentCharacter(config: AgentVisualConfig, x = 480, y = 350): RoomCharacterEntity {
+  // ==========================================
+  // ENHANCED PROCEDURAL CHARACTER FACTORY (+50% SCALE)
+  // ==========================================
+  protected createAgentCharacter(config: AgentVisualConfig, x: number, y: number): RoomCharacterEntity {
     // 1. Desk Drop Shadow
-    this.add.image(x, y + 42, 'desk_shadow');
+    const isPatron = config.role === 'Patron';
+    this.add.image(x, y + 46, 'desk_shadow');
 
     // 2. Chair
-    const chairTexture = config.role === 'Patron' ? 'patron_chair' : 'chair_texture';
-    this.add.image(x, y - 12, chairTexture);
+    const chairTexture = isPatron ? 'patron_chair' : 'chair_texture';
+    this.add.image(x, y - 14, chairTexture);
 
     // 3. Desk
-    const deskTexture = config.role === 'Patron' ? 'patron_desk' : 'desk_texture';
-    const desk = this.add.image(x, y + 20, deskTexture);
+    const deskTexture = isPatron ? 'patron_desk' : 'desk_texture';
+    const desk = this.add.image(x, y + 22, deskTexture);
 
-    // 4. Monitor (or Desk accessories)
+    // 4. Monitor / Workstation Screen
     const monitor = this.add.image(x, y + 10, 'monitor_texture');
     this.tweens.add({
       targets: monitor,
-      scaleY: 1.03,
-      duration: 1400,
+      scaleY: 1.04,
+      duration: 1200 + Math.random() * 500,
       yoyo: true,
       repeat: -1,
     });
 
     // 5. Container
-    const agentContainer = this.add.container(x, y - 16);
+    const agentContainer = this.add.container(x, y - 20);
 
-    // Body
-    const body = this.add.rectangle(0, 8, 18, 16, config.shirtColor);
-    body.setStrokeStyle(1, 0x0f172a);
+    // Body (24x22 enlarged)
+    const body = this.add.rectangle(0, 10, 24, 22, config.shirtColor);
+    body.setStrokeStyle(1.5, 0x0f172a);
 
-    const collar = this.add.rectangle(0, 1, 8, 4, config.bodyColor);
-    const accessory = this.add.rectangle(0, 7, 4, 7, config.bodyColor);
+    const collar = this.add.rectangle(0, 0, 10, 5, config.bodyColor);
+    const accessory = this.add.rectangle(0, 8, 5, 10, config.bodyColor);
 
-    // Arms & Hands
-    const leftArm = this.add.rectangle(-12, 7, 6, 12, config.shirtColor);
-    leftArm.setStrokeStyle(1, 0x0f172a);
-    const leftHand = this.add.rectangle(-12, 14, 5, 5, 0xfed7aa);
-    leftHand.setStrokeStyle(1, 0x0f172a);
+    // Arms & Hands (Distinct)
+    const leftArm = this.add.rectangle(-16, 9, 8, 16, config.shirtColor);
+    leftArm.setStrokeStyle(1.5, 0x0f172a);
+    const leftHand = this.add.rectangle(-16, 18, 7, 7, 0xfed7aa);
+    leftHand.setStrokeStyle(1.5, 0x0f172a);
 
-    const rightArm = this.add.rectangle(12, 7, 6, 12, config.shirtColor);
-    rightArm.setStrokeStyle(1, 0x0f172a);
-    const rightHand = this.add.rectangle(12, 14, 5, 5, 0xfed7aa);
-    rightHand.setStrokeStyle(1, 0x0f172a);
+    const rightArm = this.add.rectangle(16, 9, 8, 16, config.shirtColor);
+    rightArm.setStrokeStyle(1.5, 0x0f172a);
+    const rightHand = this.add.rectangle(16, 18, 7, 7, 0xfed7aa);
+    rightHand.setStrokeStyle(1.5, 0x0f172a);
 
-    // Head & Hair
-    const head = this.add.rectangle(0, -7, 18, 15, 0xfed7aa);
-    head.setStrokeStyle(1, 0x0f172a);
+    // Head & Hair (22x18 enlarged)
+    const head = this.add.rectangle(0, -9, 22, 18, 0xfed7aa);
+    head.setStrokeStyle(1.5, 0x0f172a);
 
-    const hair = this.add.rectangle(0, -14, 20, 7, config.hairColor);
-    const hairLeft = this.add.rectangle(-9, -9, 3, 6, config.hairColor);
-    const hairRight = this.add.rectangle(9, -9, 3, 6, config.hairColor);
+    const hair = this.add.rectangle(0, -18, 24, 9, config.hairColor);
+    const hairLeft = this.add.rectangle(-11, -11, 4, 8, config.hairColor);
+    const hairRight = this.add.rectangle(11, -11, 4, 8, config.hairColor);
 
-    // Eyes
-    const leftEye = this.add.rectangle(-4, -8, 2, 3, 0x0f172a);
-    const leftEyeLight = this.add.rectangle(-4, -9, 1, 1, 0xffffff);
-    const rightEye = this.add.rectangle(4, -8, 2, 3, 0x0f172a);
-    const rightEyeLight = this.add.rectangle(4, -9, 1, 1, 0xffffff);
+    // Eyes (3x4 with highlight)
+    const leftEye = this.add.rectangle(-5, -10, 3, 4, 0x0f172a);
+    const leftEyeLight = this.add.rectangle(-5, -11, 1.5, 1.5, 0xffffff);
+    const rightEye = this.add.rectangle(5, -10, 3, 4, 0x0f172a);
+    const rightEyeLight = this.add.rectangle(5, -11, 1.5, 1.5, 0xffffff);
 
-    // Mouth Graphics
+    // Dynamic Facial Expression
     const mouthGraphics = this.add.graphics();
     this.drawMouth(mouthGraphics, 'IDLE');
 
-    // Emoji Badge
-    const emojiBadge = this.add.text(0, -28, config.avatarIcon, {
-      fontSize: '16px',
+    // Emoji Badge (+50% font)
+    const emojiBadge = this.add.text(0, -34, config.avatarIcon, {
+      fontSize: '20px',
     }).setOrigin(0.5);
 
-    // Role Tag
-    const roleTagBg = this.add.rectangle(0, 52, 130, 16, 0x0f172a, 0.95);
-    roleTagBg.setStrokeStyle(1, config.shirtColor);
-    const roleText = this.add.text(0, 52, config.name, {
+    // Role Tag (+50% font)
+    const roleTagBg = this.add.rectangle(0, 58, 140, 20, 0x0f172a, 0.95);
+    roleTagBg.setStrokeStyle(1.5, config.shirtColor);
+    const roleText = this.add.text(0, 58, config.name, {
       fontFamily: 'monospace',
-      fontSize: '9px',
+      fontSize: '11px',
       color: '#f8fafc',
     }).setOrigin(0.5);
 
-    // Status Pill
-    const stateText = this.add.text(0, 68, '● IDLE', {
+    // State Pill (+50% font)
+    const stateText = this.add.text(0, 76, '● IDLE', {
       fontFamily: 'monospace',
-      fontSize: '8px',
+      fontSize: '10px',
       color: '#10b981',
     }).setOrigin(0.5);
 
-    // Speech Bubble
-    const bubbleContainer = this.add.container(0, -72);
+    // Speech Bubble (+50% scale, 210x48)
+    const bubbleContainer = this.add.container(0, -82);
     const bubbleBg = this.add.graphics();
-    this.drawBubble(bubbleBg, 180, 42);
+    this.drawBubble(bubbleBg, 210, 48);
     const bubbleText = this.add.text(0, -4, 'Hazırda bekliyor', {
       fontFamily: 'monospace',
-      fontSize: '8px',
+      fontSize: '10px',
       color: '#0f172a',
       align: 'center',
-      wordWrap: { width: 168 },
+      wordWrap: { width: 195 },
     }).setOrigin(0.5);
     bubbleContainer.add([bubbleBg, bubbleText]);
     bubbleContainer.setVisible(false);
 
-    // Alert & Trade Icons
-    const alertIcon = this.add.image(0, -46, 'alert_bubble');
+    // Alert & Trade Badges
+    const alertIcon = this.add.image(0, -56, 'alert_bubble');
     alertIcon.setVisible(false);
     this.tweens.add({
       targets: alertIcon,
-      y: -52,
+      y: -62,
       duration: 500,
       yoyo: true,
       repeat: -1,
     });
 
-    const tradeIcon = this.add.image(18, -46, 'trading_badge');
+    const tradeIcon = this.add.image(22, -56, 'trading_badge');
     tradeIcon.setVisible(false);
 
-    const warningBadge = this.add.container(0, -50);
+    const warningBadge = this.add.container(0, -60);
     const stopImg = this.add.image(0, 0, 'warning_stop');
-    const stopText = this.add.text(0, -18, 'LİMİT AŞIMI!', {
+    const stopText = this.add.text(0, -20, 'LİMİT AŞIMI!', {
       fontFamily: 'monospace',
-      fontSize: '8px',
+      fontSize: '10px',
       color: '#ef4444',
     }).setOrigin(0.5);
     warningBadge.add([stopImg, stopText]);
@@ -257,27 +265,27 @@ export abstract class BaseRoomScene extends Phaser.Scene {
       bubbleContainer,
     ]);
 
-    // Breathing Animation
+    // Idle Breathing
     this.tweens.add({
       targets: [head, hair, hairLeft, hairRight, leftEye, leftEyeLight, rightEye, rightEyeLight, mouthGraphics, emojiBadge],
-      y: '-=2',
-      duration: 1100,
+      y: '-=3',
+      duration: 1100 + Math.random() * 300,
       yoyo: true,
       repeat: -1,
       ease: 'Sine.easeInOut',
     });
 
-    // Special Confidence Badge for Risk Analisti
+    // Special Confidence Badge
     let confidenceBadge: Phaser.GameObjects.Container | undefined;
     let confidenceText: Phaser.GameObjects.Text | undefined;
 
     if (config.role === 'Risk Analisti') {
-      confidenceBadge = this.add.container(x + 46, y - 32);
-      const cBg = this.add.rectangle(0, 0, 44, 18, 0x064e3b, 0.95);
-      cBg.setStrokeStyle(1, 0x10b981);
+      confidenceBadge = this.add.container(x + 50, y - 36);
+      const cBg = this.add.rectangle(0, 0, 48, 20, 0x064e3b, 0.95);
+      cBg.setStrokeStyle(1.5, 0x10b981);
       confidenceText = this.add.text(0, 0, '%75', {
         fontFamily: 'monospace',
-        fontSize: '9px',
+        fontSize: '11px',
         color: '#34d399',
       }).setOrigin(0.5);
       confidenceBadge.add([cBg, confidenceText]);
@@ -287,7 +295,7 @@ export abstract class BaseRoomScene extends Phaser.Scene {
       this.showBanner(`${config.avatarIcon} ${config.role}: [${stateText.text}]`);
     });
 
-    this.characterEntity = {
+    const entity: RoomCharacterEntity = {
       config,
       container: agentContainer,
       bodySprite: body,
@@ -306,143 +314,149 @@ export abstract class BaseRoomScene extends Phaser.Scene {
       warningBadge,
       confidenceBadge,
       confidenceText,
+      dialogueQueue: [],
+      isSpeaking: false,
     };
 
-    return this.characterEntity;
+    this.agentsInRoom.set(config.role, entity);
+    return entity;
   }
 
   protected drawMouth(graphics: Phaser.GameObjects.Graphics, state: AgentState): void {
     graphics.clear();
     switch (state) {
       case 'IDLE':
-        graphics.lineStyle(1, 0x334155, 1);
-        graphics.lineBetween(-3, -3, 3, -3);
+        graphics.lineStyle(1.5, 0x334155, 1);
+        graphics.lineBetween(-4, -4, 4, -4);
         break;
       case 'ANALYZING':
-        graphics.lineStyle(1.5, 0x1e293b, 1);
-        graphics.lineBetween(-3, -2, 2, -4);
+        graphics.lineStyle(2, 0x1e293b, 1);
+        graphics.lineBetween(-4, -3, 3, -5);
         break;
       case 'ALERTING':
         graphics.fillStyle(0x991b1b, 1);
-        graphics.fillCircle(0, -3, 2.5);
-        graphics.lineStyle(1, 0x0f172a, 1);
-        graphics.strokeCircle(0, -3, 2.5);
+        graphics.fillCircle(0, -4, 3.5);
+        graphics.lineStyle(1.5, 0x0f172a, 1);
+        graphics.strokeCircle(0, -4, 3.5);
         break;
       case 'TRADING':
-        graphics.lineStyle(1.5, 0x047857, 1);
+        graphics.lineStyle(2, 0x047857, 1);
         graphics.beginPath();
-        graphics.arc(0, -5, 3.5, 0.15 * Math.PI, 0.85 * Math.PI, false);
+        graphics.arc(0, -6, 4.5, 0.15 * Math.PI, 0.85 * Math.PI, false);
         graphics.strokePath();
         break;
       case 'SALUTING':
         graphics.fillStyle(0x0f172a, 1);
-        graphics.fillCircle(0, -3, 3);
+        graphics.fillCircle(0, -4, 4);
         graphics.fillStyle(0xffffff, 1);
-        graphics.fillRect(-2, -5, 4, 1.5);
+        graphics.fillRect(-3, -6, 6, 2);
         break;
     }
   }
 
-  public setLocalAgentState(state: AgentState, taskDescription?: string): void {
-    if (!this.characterEntity) return;
+  public setAgentStateInRoom(role: AgentRole, state: AgentState, taskDescription?: string): void {
+    const agent = this.agentsInRoom.get(role);
+    if (!agent) return;
 
-    this.drawMouth(this.characterEntity.mouthGraphics, state);
-    this.characterEntity.alertIcon.setVisible(false);
-    this.characterEntity.tradeIcon.setVisible(false);
+    this.drawMouth(agent.mouthGraphics, state);
+    agent.alertIcon.setVisible(false);
+    agent.tradeIcon.setVisible(false);
 
-    if (this.characterEntity.typingTween) {
-      this.characterEntity.typingTween.stop();
-      this.characterEntity.typingTween = undefined;
-      this.characterEntity.leftHand.setY(14);
-      this.characterEntity.rightHand.setY(14);
-      this.characterEntity.rightArm.setY(7);
+    if (agent.typingTween) {
+      agent.typingTween.stop();
+      agent.typingTween = undefined;
+      agent.leftHand.setY(18);
+      agent.rightHand.setY(18);
+      agent.rightArm.setY(9);
     }
 
     switch (state) {
       case 'IDLE':
-        this.characterEntity.stateText.setText('● IDLE').setColor('#10b981');
+        agent.stateText.setText('● IDLE').setColor('#10b981');
         break;
       case 'ANALYZING':
-        this.characterEntity.stateText.setText('⚙ ANALYZING').setColor('#38bdf8');
-        this.characterEntity.typingTween = this.tweens.add({
-          targets: [this.characterEntity.leftHand, this.characterEntity.rightHand],
-          y: '-=2',
+        agent.stateText.setText('⚙ ANALYZING').setColor('#38bdf8');
+        agent.typingTween = this.tweens.add({
+          targets: [agent.leftHand, agent.rightHand],
+          y: '-=3',
           duration: 160,
           yoyo: true,
           repeat: -1,
           ease: 'Sine.easeInOut',
         });
-        if (taskDescription && !this.isSpeaking) {
-          this.queueDialogue(taskDescription);
+        if (taskDescription && !agent.isSpeaking) {
+          this.queueAgentDialogue(role, taskDescription);
         }
         break;
       case 'ALERTING':
-        this.characterEntity.stateText.setText('! ALERT').setColor('#ef4444');
-        this.characterEntity.alertIcon.setVisible(true);
-        if (taskDescription && !this.isSpeaking) {
-          this.queueDialogue(taskDescription);
+        agent.stateText.setText('! ALERT').setColor('#ef4444');
+        agent.alertIcon.setVisible(true);
+        if (taskDescription && !agent.isSpeaking) {
+          this.queueAgentDialogue(role, taskDescription);
         }
         break;
       case 'TRADING':
-        this.characterEntity.stateText.setText('⚡ TRADING').setColor('#f59e0b');
-        this.characterEntity.tradeIcon.setVisible(true);
-        this.characterEntity.typingTween = this.tweens.add({
-          targets: [this.characterEntity.leftHand, this.characterEntity.rightHand],
-          y: '-=3',
+        agent.stateText.setText('⚡ TRADING').setColor('#f59e0b');
+        agent.tradeIcon.setVisible(true);
+        agent.typingTween = this.tweens.add({
+          targets: [agent.leftHand, agent.rightHand],
+          y: '-=4',
           duration: 120,
           yoyo: true,
           repeat: -1,
           ease: 'Sine.easeInOut',
         });
-        if (taskDescription && !this.isSpeaking) {
-          this.queueDialogue(taskDescription);
+        if (taskDescription && !agent.isSpeaking) {
+          this.queueAgentDialogue(role, taskDescription);
         }
         break;
       case 'SALUTING':
-        this.characterEntity.stateText.setText('👋 SELAM').setColor('#ec4899');
-        this.characterEntity.rightHand.setY(6);
-        this.characterEntity.rightArm.setY(3);
+        agent.stateText.setText('👋 SELAM').setColor('#ec4899');
+        agent.rightHand.setY(8);
+        agent.rightArm.setY(4);
         break;
     }
   }
 
-  public queueDialogue(text: string): void {
-    this.dialogueQueue.push(text);
-    if (!this.isSpeaking) {
-      this.processDialogueQueue();
+  public queueAgentDialogue(role: AgentRole, text: string): void {
+    const agent = this.agentsInRoom.get(role);
+    if (!agent) return;
+
+    agent.dialogueQueue.push(text);
+    if (!agent.isSpeaking) {
+      this.processAgentDialogueQueue(agent);
     }
   }
 
-  private processDialogueQueue(): void {
-    if (!this.characterEntity || this.dialogueQueue.length === 0) {
-      this.isSpeaking = false;
+  private processAgentDialogueQueue(agent: RoomCharacterEntity): void {
+    if (agent.dialogueQueue.length === 0) {
+      agent.isSpeaking = false;
       return;
     }
 
-    this.isSpeaking = true;
-    const nextText = this.dialogueQueue.shift()!;
-    this.characterEntity.bubbleText.setText(nextText.slice(0, 64));
-    this.characterEntity.bubbleContainer.setVisible(true);
-    this.characterEntity.bubbleContainer.setAlpha(0);
+    agent.isSpeaking = true;
+    const nextText = agent.dialogueQueue.shift()!;
+    agent.bubbleText.setText(nextText.slice(0, 70));
+    agent.bubbleContainer.setVisible(true);
+    agent.bubbleContainer.setAlpha(0);
 
     this.tweens.add({
-      targets: this.characterEntity.bubbleContainer,
+      targets: agent.bubbleContainer,
       alpha: 1,
-      y: -74,
+      y: -88,
       duration: 250,
       ease: 'Back.easeOut',
     });
 
     this.time.delayedCall(4500, () => {
-      if (!this.characterEntity) return;
       this.tweens.add({
-        targets: this.characterEntity.bubbleContainer,
+        targets: agent.bubbleContainer,
         alpha: 0,
-        y: -70,
+        y: -82,
         duration: 300,
         onComplete: () => {
-          if (this.characterEntity) this.characterEntity.bubbleContainer.setVisible(false);
-          this.time.delayedCall(400, () => this.processDialogueQueue());
+          agent.bubbleContainer.setVisible(false);
+          this.time.delayedCall(400, () => this.processAgentDialogueQueue(agent));
         },
       });
     });
@@ -451,21 +465,21 @@ export abstract class BaseRoomScene extends Phaser.Scene {
   private drawBubble(graphics: Phaser.GameObjects.Graphics, width: number, height: number): void {
     graphics.clear();
     graphics.fillStyle(0xffffff, 0.98);
-    graphics.fillRoundedRect(-width / 2, -height / 2, width, height, 6);
-    graphics.lineStyle(1, 0x1e293b);
-    graphics.strokeRoundedRect(-width / 2, -height / 2, width, height, 6);
+    graphics.fillRoundedRect(-width / 2, -height / 2, width, height, 8);
+    graphics.lineStyle(1.5, 0x1e293b);
+    graphics.strokeRoundedRect(-width / 2, -height / 2, width, height, 8);
 
     graphics.fillStyle(0xffffff, 0.98);
     graphics.beginPath();
-    graphics.moveTo(-4, height / 2);
-    graphics.lineTo(4, height / 2);
-    graphics.lineTo(0, height / 2 + 5);
+    graphics.moveTo(-5, height / 2);
+    graphics.lineTo(5, height / 2);
+    graphics.lineTo(0, height / 2 + 6);
     graphics.closePath();
     graphics.fillPath();
   }
 
   // ==========================================
-  // HUD, BUTTONS & COMMON CONTROLS
+  // HUD, NAVIGATION & MINI-MAP (KROKİ)
   // ==========================================
   private createHUD(): void {
     const { GAME_WIDTH } = APP_CONFIG;
@@ -474,60 +488,129 @@ export abstract class BaseRoomScene extends Phaser.Scene {
     hudBar.setStrokeStyle(2, 0x1e293b);
     hudBar.setDepth(20);
 
-    this.statusDot = this.add.circle(130, 22, 5, 0x10b981).setDepth(21);
-    this.statusBadgeText = this.add.text(142, 22, 'ONLINE', {
+    this.statusDot = this.add.circle(180, 22, 6, 0x10b981).setDepth(21);
+    this.statusBadgeText = this.add.text(194, 22, 'ONLINE', {
       fontFamily: 'monospace',
-      fontSize: '9px',
+      fontSize: '11px',
       color: '#10b981',
     }).setOrigin(0, 0.5).setDepth(21);
 
-    this.balanceText = this.add.text(260, 22, `💰 BAKIYE: $${gameState.totalBalanceUsd.toLocaleString()}`, {
+    this.balanceText = this.add.text(290, 22, `💰 BAKIYE: $${gameState.totalBalanceUsd.toLocaleString()}`, {
       fontFamily: 'monospace',
-      fontSize: '9px',
+      fontSize: '11px',
       color: '#facc15',
     }).setOrigin(0, 0.5).setDepth(21);
 
-    this.positionsText = this.add.text(440, 22, `📈 POZİSYON: ${gameState.openPositionsCount}`, {
+    this.positionsText = this.add.text(490, 22, `📈 POZİSYON: ${gameState.openPositionsCount}`, {
       fontFamily: 'monospace',
-      fontSize: '9px',
+      fontSize: '11px',
       color: '#38bdf8',
     }).setOrigin(0, 0.5).setDepth(21);
 
     this.severityText = this.add.text(GAME_WIDTH - 30, 22, `ORTAM: ${gameState.severity}`, {
       fontFamily: 'monospace',
-      fontSize: '9px',
+      fontSize: '11px',
       color: '#10b981',
     }).setOrigin(1, 0.5).setDepth(21);
   }
 
-  private createReturnButton(): void {
-    const returnBtn = this.add.image(60, 22, 'return_door').setDepth(25);
-    returnBtn.setInteractive({ useHandCursor: true });
+  private createNavigationControls(): void {
+    const currentIdx = ROOMS.findIndex((r) => r.key === this.roomKey);
+    const prevRoom = ROOMS[(currentIdx - 1 + ROOMS.length) % ROOMS.length];
+    const nextRoom = ROOMS[(currentIdx + 1) % ROOMS.length];
 
-    returnBtn.on('pointerover', () => returnBtn.setScale(1.05));
-    returnBtn.on('pointerout', () => returnBtn.setScale(1.0));
-    returnBtn.on('pointerdown', () => this.returnToLobby());
+    // Left Previous Room Button
+    const prevBtn = this.add.rectangle(85, 22, 130, 26, 0x1e293b, 1).setDepth(25);
+    prevBtn.setStrokeStyle(1.5, 0x38bdf8);
+    prevBtn.setInteractive({ useHandCursor: true });
+    this.add.text(85, 22, `◀ ${prevRoom.shortName}`, {
+      fontFamily: 'monospace',
+      fontSize: '11px',
+      color: '#38bdf8',
+    }).setOrigin(0.5).setDepth(26);
+
+    prevBtn.on('pointerover', () => prevBtn.setFillStyle(0x334155));
+    prevBtn.on('pointerout', () => prevBtn.setFillStyle(0x1e293b));
+    prevBtn.on('pointerdown', () => this.switchRoom(prevRoom.key));
+
+    // Right Next Room Button
+    const nextBtn = this.add.rectangle(730, 22, 130, 26, 0x1e293b, 1).setDepth(25);
+    nextBtn.setStrokeStyle(1.5, 0x38bdf8);
+    nextBtn.setInteractive({ useHandCursor: true });
+    this.add.text(730, 22, `${nextRoom.shortName} ▶`, {
+      fontFamily: 'monospace',
+      fontSize: '11px',
+      color: '#38bdf8',
+    }).setOrigin(0.5).setDepth(26);
+
+    nextBtn.on('pointerover', () => nextBtn.setFillStyle(0x334155));
+    nextBtn.on('pointerout', () => nextBtn.setFillStyle(0x1e293b));
+    nextBtn.on('pointerdown', () => this.switchRoom(nextRoom.key));
   }
 
-  private returnToLobby(): void {
-    this.cameras.main.fadeOut(250, 11, 15, 25);
-    this.time.delayedCall(250, () => {
-      this.scene.start('LobbyScene');
+  private createMiniMap(): void {
+    const { GAME_WIDTH } = APP_CONFIG;
+    const startX = GAME_WIDTH - 150;
+    const startY = 60;
+
+    this.miniMapContainer = this.add.container(startX, startY).setDepth(35);
+
+    const mapBg = this.add.rectangle(0, 0, 260, 36, 0x0f172a, 0.95);
+    mapBg.setStrokeStyle(1.5, 0x334155);
+    this.miniMapContainer.add(mapBg);
+
+    const spacing = 40;
+    ROOMS.forEach((room, idx) => {
+      const rx = (idx - 2.5) * spacing;
+      const isCurrent = room.key === this.roomKey;
+
+      const iconBox = this.add.rectangle(rx, 0, 34, 28, isCurrent ? 0x1e3a8a : 0x1e293b, 1);
+      iconBox.setStrokeStyle(isCurrent ? 2 : 1, isCurrent ? 0x38bdf8 : 0x475569);
+      iconBox.setInteractive({ useHandCursor: true });
+
+      const iconText = this.add.text(rx, -2, room.icon, { fontSize: '14px' }).setOrigin(0.5);
+
+      // Status LED dot
+      const dotColor = gameState.getRoomStatusColor(room.key);
+      const dot = this.add.circle(rx + 11, 9, 3.5, dotColor);
+
+      this.miniMapDots.set(room.key, dot);
+
+      iconBox.on('pointerover', () => iconBox.setScale(1.1));
+      iconBox.on('pointerout', () => iconBox.setScale(1.0));
+      iconBox.on('pointerdown', () => this.switchRoom(room.key));
+
+      this.miniMapContainer.add([iconBox, iconText, dot]);
+    });
+  }
+
+  public updateMiniMapDots(): void {
+    ROOMS.forEach((room) => {
+      const dot = this.miniMapDots.get(room.key);
+      if (dot) {
+        dot.setFillStyle(gameState.getRoomStatusColor(room.key));
+      }
+    });
+  }
+
+  protected switchRoom(targetKey: string): void {
+    if (targetKey === this.roomKey) return;
+    this.cameras.main.fadeOut(200, 11, 15, 25);
+    this.time.delayedCall(200, () => {
+      this.scene.start(targetKey);
     });
   }
 
   private createBarisButton(): void {
-    const { GAME_WIDTH } = APP_CONFIG;
-    const btnX = GAME_WIDTH / 2 + 100;
-    const btnY = 22;
+    const btnX = 140;
+    const btnY = 54;
 
-    const btnBg = this.add.rectangle(btnX, btnY, 130, 24, 0x3b82f6, 1);
+    const btnBg = this.add.rectangle(btnX, btnY, 150, 28, 0x3b82f6, 1).setDepth(22);
     btnBg.setStrokeStyle(2, 0x93c5fd);
-    btnBg.setDepth(22);
 
     this.add.text(btnX, btnY, 'Barış Geldi 👋', {
       fontFamily: 'monospace',
-      fontSize: '9px',
+      fontSize: '11px',
       color: '#ffffff',
     }).setOrigin(0.5).setDepth(23);
 
@@ -537,9 +620,9 @@ export abstract class BaseRoomScene extends Phaser.Scene {
     btnBg.on('pointerdown', async () => {
       btnBg.setFillStyle(0x1d4ed8);
       this.showBanner('👋 BARIŞ GELDİ, KAPTAN! ODA TEYAKKUZDA! 🚀');
-      if (this.characterEntity) {
-        this.setLocalAgentState('SALUTING', 'Hoş geldin Kaptan!');
-      }
+      this.agentsInRoom.forEach((agent) => {
+        this.setAgentStateInRoom(agent.config.role, 'SALUTING', 'Hoş geldin Kaptan!');
+      });
       await apiService.triggerSignals();
     });
   }
@@ -577,34 +660,34 @@ export abstract class BaseRoomScene extends Phaser.Scene {
   private createTradeProposalBanner(): void {
     const { GAME_WIDTH } = APP_CONFIG;
 
-    this.proposalContainer = this.add.container(GAME_WIDTH / 2, 80).setDepth(150);
-    const bg = this.add.rectangle(0, 0, 620, 42, 0x0f172a, 0.98);
+    this.proposalContainer = this.add.container(GAME_WIDTH / 2, 92).setDepth(150);
+    const bg = this.add.rectangle(0, 0, 680, 48, 0x0f172a, 0.98);
     bg.setStrokeStyle(2, 0xf59e0b);
 
-    this.proposalText = this.add.text(-120, -7, '', {
+    this.proposalText = this.add.text(-140, -8, '', {
       fontFamily: 'monospace',
-      fontSize: '9px',
+      fontSize: '11px',
       color: '#fbbf24',
     }).setOrigin(0.5);
 
-    this.proposalSubText = this.add.text(-120, 9, '', {
+    this.proposalSubText = this.add.text(-140, 10, '', {
       fontFamily: 'monospace',
-      fontSize: '8px',
+      fontSize: '10px',
       color: '#94a3b8',
     }).setOrigin(0.5);
 
-    this.proposalTimerText = this.add.text(90, 0, '(30s)', {
+    this.proposalTimerText = this.add.text(100, 0, '(30s)', {
       fontFamily: 'monospace',
-      fontSize: '8px',
+      fontSize: '10px',
       color: '#94a3b8',
     }).setOrigin(0.5);
 
-    const approveBtn = this.add.rectangle(185, 0, 95, 26, 0x10b981, 1);
-    approveBtn.setStrokeStyle(1, 0x34d399);
+    const approveBtn = this.add.rectangle(200, 0, 105, 30, 0x10b981, 1);
+    approveBtn.setStrokeStyle(1.5, 0x34d399);
     approveBtn.setInteractive({ useHandCursor: true });
-    const approveText = this.add.text(185, 0, 'ONAYLA ✅', {
+    const approveText = this.add.text(200, 0, 'ONAYLA ✅', {
       fontFamily: 'monospace',
-      fontSize: '8px',
+      fontSize: '10px',
       color: '#ffffff',
     }).setOrigin(0.5);
 
@@ -615,12 +698,12 @@ export abstract class BaseRoomScene extends Phaser.Scene {
       }
     });
 
-    const dismissBtn = this.add.rectangle(260, 0, 26, 26, 0xef4444, 1);
-    dismissBtn.setStrokeStyle(1, 0xf87171);
+    const dismissBtn = this.add.rectangle(285, 0, 30, 30, 0xef4444, 1);
+    dismissBtn.setStrokeStyle(1.5, 0xf87171);
     dismissBtn.setInteractive({ useHandCursor: true });
-    const dismissText = this.add.text(260, 0, '✕', {
+    const dismissText = this.add.text(285, 0, '✕', {
       fontFamily: 'monospace',
-      fontSize: '9px',
+      fontSize: '11px',
       color: '#ffffff',
     }).setOrigin(0.5);
 
@@ -714,13 +797,13 @@ export abstract class BaseRoomScene extends Phaser.Scene {
   private createNotificationBanner(): void {
     const { GAME_WIDTH } = APP_CONFIG;
 
-    this.bannerContainer = this.add.container(GAME_WIDTH / 2, 114).setDepth(30);
-    const bg = this.add.rectangle(0, 0, 540, 26, 0x1e293b, 0.95);
+    this.bannerContainer = this.add.container(GAME_WIDTH / 2, 126).setDepth(30);
+    const bg = this.add.rectangle(0, 0, 580, 28, 0x1e293b, 0.95);
     bg.setStrokeStyle(2, 0x38bdf8);
 
     this.bannerText = this.add.text(0, 0, '', {
       fontFamily: 'monospace',
-      fontSize: '9px',
+      fontSize: '11px',
       color: '#38bdf8',
     }).setOrigin(0.5);
 
@@ -741,19 +824,19 @@ export abstract class BaseRoomScene extends Phaser.Scene {
   private createEventTicker(): void {
     const { GAME_WIDTH, GAME_HEIGHT } = APP_CONFIG;
 
-    const tickerBar = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT - 16, GAME_WIDTH - 24, 24, 0x0f172a, 0.95);
+    const tickerBar = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT - 16, GAME_WIDTH - 24, 26, 0x0f172a, 0.95);
     tickerBar.setStrokeStyle(1, 0x334155);
     tickerBar.setDepth(20);
 
     this.add.text(24, GAME_HEIGHT - 16, '📡 CANLI AKIŞ:', {
       fontFamily: 'monospace',
-      fontSize: '9px',
+      fontSize: '11px',
       color: '#38bdf8',
     }).setOrigin(0, 0.5).setDepth(21);
 
-    this.tickerText = this.add.text(120, GAME_HEIGHT - 16, gameState.latestTicker, {
+    this.tickerText = this.add.text(140, GAME_HEIGHT - 16, gameState.latestTicker, {
       fontFamily: 'monospace',
-      fontSize: '8px',
+      fontSize: '10px',
       color: '#94a3b8',
     }).setOrigin(0, 0.5).setDepth(21);
   }
@@ -770,9 +853,10 @@ export abstract class BaseRoomScene extends Phaser.Scene {
   private bindGameStateEvents(): void {
     this.unsubs.push(
       gameState.onAgentStateChange(({ role, state, task }) => {
-        if (role === this.agentRole) {
-          this.setLocalAgentState(state, task);
+        if (this.agentsInRoom.has(role)) {
+          this.setAgentStateInRoom(role, state, task);
         }
+        this.updateMiniMapDots();
       })
     );
 
@@ -809,14 +893,14 @@ export abstract class BaseRoomScene extends Phaser.Scene {
   }
 
   private syncInitialState(): void {
-    const localAgent = gameState.agents.get(this.agentRole);
-    if (localAgent) {
-      this.setLocalAgentState(localAgent.state, localAgent.currentTask);
-      if (this.characterEntity && this.characterEntity.confidenceText && localAgent.confidence !== undefined) {
-        this.characterEntity.confidenceText.setText(`%${Math.round(localAgent.confidence * 100)}`);
+    this.agentsInRoom.forEach((_, role) => {
+      const stateData = gameState.agents.get(role);
+      if (stateData) {
+        this.setAgentStateInRoom(role, stateData.state, stateData.currentTask);
       }
-    }
+    });
     this.updateAtmosphere(gameState.severity);
+    this.updateMiniMapDots();
   }
 
   shutdown(): void {

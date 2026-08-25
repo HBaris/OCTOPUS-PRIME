@@ -4,6 +4,7 @@ import { eventBus } from '../events/EventBus.js';
 import { BinanceService } from '../services/binance/BinanceService.js';
 import { CorrelationTracker } from '../services/correlation/CorrelationTracker.js';
 import { logger } from '../utils/logger.js';
+import { createSpecialistAgentInfos, SpecialistAgentsManager } from './SpecialistAgents.js';
 
 export class AgentManager {
   private agents: Record<AgentRole, AgentInfo>;
@@ -13,12 +14,13 @@ export class AgentManager {
   };
   private binanceService: BinanceService;
   private correlationTracker: CorrelationTracker;
+  private specialistsManager: SpecialistAgentsManager;
 
   constructor(binanceService: BinanceService, correlationTracker: CorrelationTracker) {
     this.binanceService = binanceService;
     this.correlationTracker = correlationTracker;
 
-    this.agents = {
+    const baseAgents: Record<AgentRole, AgentInfo> = {
       [AgentRole.NEWS_TRACKER]: {
         role: AgentRole.NEWS_TRACKER,
         name: 'Haber Takip Subayı',
@@ -74,9 +76,16 @@ export class AgentManager {
         lastActive: new Date().toISOString(),
         stats: { actionsCount: 0, customMetric: '0 nihai karar' },
       },
-    };
+      ...createSpecialistAgentInfos(),
+    } as Record<AgentRole, AgentInfo>;
+
+    this.agents = baseAgents;
 
     this.initEventListeners();
+    this.specialistsManager = new SpecialistAgentsManager(
+      (role, state, task) => this.updateAgentState(role, state, task),
+      (role, actionName, status, details) => this.emitAgentAction(role, actionName, status, details)
+    );
   }
 
   private initEventListeners(): void {

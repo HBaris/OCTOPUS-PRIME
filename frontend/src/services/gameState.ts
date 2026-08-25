@@ -14,7 +14,7 @@ import {
   TradeProposalPayload,
   SystemStatusPayload,
 } from '../types/events.ts';
-import { AGENT_CONFIGS } from '../config.ts';
+import { AGENT_CONFIGS, ROOMS } from '../config.ts';
 
 export interface AgentStateData {
   role: AgentRole;
@@ -39,7 +39,7 @@ class GameStateManager {
   public totalBalanceUsd = 10000;
   public openPositionsCount = 0;
   public latestProposal: TradeProposalPayload | null = null;
-  public latestTicker = 'Sistem hazır. Event akışı bekleniyor...';
+  public latestTicker = 'Sistem hazır. 15 Ajan odalarında izleme yapıyor...';
   public wsStatus: 'ONLINE' | 'CONNECTING' | 'OFFLINE' = 'OFFLINE';
 
   private agentListeners: Set<Listener<{ role: AgentRole; state: AgentState; task?: string }>> = new Set();
@@ -102,11 +102,12 @@ class GameStateManager {
         riskAgent.confidence = payload.confidenceScore;
         this.setAgentState('Risk Analisti', 'ANALYZING', `Güven: %${Math.round(payload.confidenceScore * 100)}`);
       }
-      this.setTicker(`🛡️ Risk Analisti: Güven %${Math.round(payload.confidenceScore * 100)} (${payload.analystComment || 'Güncellendi'})`);
+      this.setTicker(`🛡️ Risk Analisti: Güven %${Math.round(payload.confidenceScore * 100)}`);
     });
 
     wsService.on<SpendingLimitWarningPayload>('SPENDING_LIMIT_WARNING', (payload) => {
       this.setAgentState('Binance İşlemci', 'ALERTING', `🛑 Limit Aşımı: ${payload.symbol}`);
+      this.setAgentState('Likidite Gözlemcisi', 'ALERTING', `🛑 Likidite Uyarısı: ${payload.symbol}`);
       this.setTicker(`🛑 LİMİT UYARISI: ${payload.symbol} $${payload.attemptedSizeUsd} engellendi!`);
     });
 
@@ -132,7 +133,7 @@ class GameStateManager {
       this.latestProposal = payload;
       this.setAgentState('Patron', 'TRADING', `${payload.symbol} için ${payload.side} onayı bekleniyor`);
       this.proposalListeners.forEach((fn) => fn(payload));
-      this.setTicker(`⚡ PATRON ÖNERİSİ: ${payload.side} ${payload.symbol} ($${payload.suggestedAmountUsd || payload.estimatedAmountUsd || 50})`);
+      this.setTicker(`🎩 PATRON ÖNERİSİ: ${payload.side} ${payload.symbol} ($${payload.suggestedAmountUsd || payload.estimatedAmountUsd || 50})`);
     });
 
     wsService.on<SystemStatusPayload>('SYSTEM_STATUS', (payload) => {
@@ -159,6 +160,29 @@ class GameStateManager {
     agent.actionsCount++;
 
     this.agentListeners.forEach((fn) => fn({ role, state, task }));
+  }
+
+  public getRoomStatusColor(roomKey: string): number {
+    const room = ROOMS.find((r) => r.key === roomKey);
+    if (!room) return 0x10b981;
+
+    let hasAlert = false;
+    let hasTrading = false;
+    let hasAnalyzing = false;
+
+    room.agentRoles.forEach((role) => {
+      const agent = this.agents.get(role);
+      if (agent) {
+        if (agent.state === 'ALERTING') hasAlert = true;
+        if (agent.state === 'TRADING') hasTrading = true;
+        if (agent.state === 'ANALYZING') hasAnalyzing = true;
+      }
+    });
+
+    if (hasAlert) return 0xef4444; // Red
+    if (hasTrading) return 0xf59e0b; // Gold
+    if (hasAnalyzing) return 0x38bdf8; // Sky Blue
+    return 0x10b981; // Green
   }
 
   public setTicker(message: string): void {

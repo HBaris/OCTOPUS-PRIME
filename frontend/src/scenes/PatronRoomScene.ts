@@ -1,11 +1,11 @@
 import { BaseRoomScene } from './BaseRoomScene.ts';
-import { AgentRole, TradeProposalPayload } from '../types/events.ts';
 import { AGENT_CONFIGS } from '../config.ts';
 import { wsService } from '../services/websocket.ts';
+import { TradeProposalPayload } from '../types/events.ts';
 
 export class PatronRoomScene extends BaseRoomScene {
-  protected agentRole: AgentRole = 'Patron';
-  protected roomName = 'Baş Analist & Yönetim Odası (Patron)';
+  protected roomKey = 'PatronRoomScene';
+  protected roomName = 'Yönetim Odası (Patron & Sekreterya)';
 
   private wsUnsub: (() => void) | null = null;
 
@@ -14,33 +14,37 @@ export class PatronRoomScene extends BaseRoomScene {
   }
 
   protected createRoomContent(): void {
-    const config = AGENT_CONFIGS.find((a) => a.role === this.agentRole)!;
+    const patronCfg = AGENT_CONFIGS.find((a) => a.role === 'Patron')!;
+    const secCfg = AGENT_CONFIGS.find((a) => a.role === 'Sekreterya')!;
 
-    // Executive Suite Decor: Luxury Mahogany Furniture, Decision Board, Chandelier/Plants
-    this.add.image(200, 240, 'patron_summary_board');
-    this.add.image(760, 240, 'news_board');
-    this.add.image(80, 240, 'plant_texture');
-    this.add.image(880, 240, 'plant_texture');
+    // Executive Suite Decor: Luxury Mahogany Decision Board & Status Displays
+    this.add.image(220, 230, 'patron_summary_board');
+    this.add.image(740, 230, 'news_board');
+    this.add.image(60, 240, 'plant_texture');
+    this.add.image(900, 240, 'cooler_texture');
 
-    this.add.text(200, 290, '🎩 NİHAİ KARAR MASASI', {
+    this.add.text(220, 280, '🎩 NİHAİ KARAR MASASI', {
       fontFamily: 'monospace',
-      fontSize: '8px',
+      fontSize: '10px',
       color: '#fbbf24',
     }).setOrigin(0.5);
 
-    this.add.text(760, 290, '📊 TÜM EKİP KORELASYONLARI', {
+    this.add.text(740, 280, '📋 OPERASYON KAYITLARI', {
       fontFamily: 'monospace',
-      fontSize: '8px',
+      fontSize: '10px',
       color: '#94a3b8',
     }).setOrigin(0.5);
 
-    // Patron Character at Luxury Mahogany Desk
-    this.createAgentCharacter(config, 480, 360);
+    // 1. Patron Character at Grand Mahogany Desk (Left-Center)
+    this.createAgentCharacter(patronCfg, 360, 380);
 
-    // Listen to TRADE_PROPOSAL for Patron's executive speech
+    // 2. Sekreterya Character at Office Workstation (Right-Center)
+    this.createAgentCharacter(secCfg, 680, 380);
+
+    // Listen to TRADE_PROPOSAL for Patron's executive voice
     this.wsUnsub = wsService.on<TradeProposalPayload>('TRADE_PROPOSAL', (payload) => {
       const line = `Ekip raporlarını inceledim, ${payload.symbol} için ${payload.side} kararı verdim, Kaptan onayına sunuyorum. 🎩`;
-      this.queueDialogue(line);
+      this.queueAgentDialogue('Patron', line);
     });
   }
 

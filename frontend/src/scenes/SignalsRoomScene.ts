@@ -1,12 +1,12 @@
 import { BaseRoomScene } from './BaseRoomScene.ts';
-import { AgentRole, SignalGeneratedPayload } from '../types/events.ts';
 import { AGENT_CONFIGS } from '../config.ts';
 import { wsService } from '../services/websocket.ts';
+import { SignalGeneratedPayload } from '../types/events.ts';
 import { formatSignalDialogue } from '../utils/signalDialogue.ts';
 
 export class SignalsRoomScene extends BaseRoomScene {
-  protected agentRole: AgentRole = 'Sinyal Avcısı';
-  protected roomName = 'Sinyal Avcısı (Ali) Odası';
+  protected roomKey = 'SignalsRoomScene';
+  protected roomName = 'Sinyal & Teknik Analiz Odası (Ali & Teknik)';
 
   private wsUnsub: (() => void) | null = null;
 
@@ -15,30 +15,34 @@ export class SignalsRoomScene extends BaseRoomScene {
   }
 
   protected createRoomContent(): void {
-    const config = AGENT_CONFIGS.find((a) => a.role === this.agentRole)!;
+    const sigCfg = AGENT_CONFIGS.find((a) => a.role === 'Sinyal Avcısı')!;
+    const techCfg = AGENT_CONFIGS.find((a) => a.role === 'Teknik Analist')!;
 
-    // Room specific decor: Radar Station & Antennae
-    this.add.image(200, 240, 'signal_radar_station');
-    this.add.image(760, 240, 'trader_screens');
-    this.add.image(80, 240, 'server_rack');
-    this.add.image(880, 240, 'server_rack');
+    // Room Decor: Radar Station, Technical Oscillators, Servers
+    this.add.image(340, 220, 'signal_radar_station');
+    this.add.image(640, 220, 'trader_screens');
+    this.add.image(60, 240, 'server_rack');
+    this.add.image(900, 240, 'server_rack');
 
-    this.add.text(200, 295, '⚡ ANLIK PİYASA RADARI', {
+    this.add.text(340, 270, '⚡ ANLIK SİNYAL RADARI (ALİ)', {
       fontFamily: 'monospace',
-      fontSize: '8px',
+      fontSize: '10px',
       color: '#ec4899',
     }).setOrigin(0.5);
 
-    this.add.text(760, 285, '🎯 SKOR EŞİĞİ >= 60 FIRSATLAR', {
+    this.add.text(640, 270, '📐 MOMENTUM VE GRAFİK İNCELEMESİ', {
       fontFamily: 'monospace',
-      fontSize: '8px',
-      color: '#f472b6',
+      fontSize: '10px',
+      color: '#a5b4fc',
     }).setOrigin(0.5);
 
-    // Agent Character at Center Desk
-    this.createAgentCharacter(config, 480, 360);
+    // 1. Sinyal Avcısı (Ali) Character (Left Desk)
+    this.createAgentCharacter(sigCfg, 340, 380);
 
-    // Listen to SIGNAL_GENERATED for direct template speech
+    // 2. Teknik Analist Character (Right Desk)
+    this.createAgentCharacter(techCfg, 640, 380);
+
+    // Listen to SIGNAL_GENERATED for Ali's speech queue
     this.wsUnsub = wsService.on<SignalGeneratedPayload>('SIGNAL_GENERATED', (payload) => {
       if (payload.action !== 'HOLD') {
         const line = formatSignalDialogue({
@@ -49,7 +53,7 @@ export class SignalsRoomScene extends BaseRoomScene {
           reasoning: payload.reasoning,
         });
         if (line) {
-          this.queueDialogue(line);
+          this.queueAgentDialogue('Sinyal Avcısı', line);
         }
       }
     });

@@ -1,37 +1,41 @@
 import { BaseRoomScene } from './BaseRoomScene.ts';
-import { AgentRole } from '../types/events.ts';
 import { AGENT_CONFIGS } from '../config.ts';
 
 export class PortfolioRoomScene extends BaseRoomScene {
-  protected agentRole: AgentRole = 'Portföy Muhasebecisi';
-  protected roomName = 'Portföy & Hazine Muhasebe Odası';
+  protected roomKey = 'PortfolioRoomScene';
+  protected roomName = 'Portföy & Kripto Varlık Masası (4 Uzman)';
 
   constructor() {
     super({ key: 'PortfolioRoomScene' });
   }
 
   protected createRoomContent(): void {
-    const config = AGENT_CONFIGS.find((a) => a.role === this.agentRole)!;
+    const portCfg = AGENT_CONFIGS.find((a) => a.role === 'Portföy Muhasebecisi')!;
+    const btcCfg = AGENT_CONFIGS.find((a) => a.role === 'BTC Analisti')!;
+    const ethCfg = AGENT_CONFIGS.find((a) => a.role === 'ETH Analisti')!;
+    const solCfg = AGENT_CONFIGS.find((a) => a.role === 'SOL Analisti')!;
 
-    // Room specific decor: Heavy Gold Vault & Asset Screens
-    this.add.image(200, 240, 'portfolio_vault');
-    this.add.image(760, 240, 'news_board');
-    this.add.image(80, 240, 'plant_texture');
-    this.add.image(880, 240, 'cooler_texture');
+    // Portfolio Decor: Heavy Gold Vault & Asset Screens
+    this.add.image(480, 220, 'portfolio_vault');
+    this.add.image(60, 240, 'plant_texture');
+    this.add.image(900, 240, 'cooler_texture');
 
-    this.add.text(200, 295, '💰 USDT KASASI & PnL DEFTERİ', {
+    this.add.text(480, 275, '💰 USDT KASASI, TEMİNAT VE KRİPTO ANALİZLERİ', {
       fontFamily: 'monospace',
-      fontSize: '8px',
+      fontSize: '10px',
       color: '#a78bfa',
     }).setOrigin(0.5);
 
-    this.add.text(760, 290, '📊 AÇIK POZİSYON VE TEMİNATLAR', {
-      fontFamily: 'monospace',
-      fontSize: '8px',
-      color: '#c4b5fd',
-    }).setOrigin(0.5);
+    // 1. Portföy Muhasebecisi (Top-Left)
+    this.createAgentCharacter(portCfg, 200, 320);
 
-    // Agent Character at Center Desk
-    this.createAgentCharacter(config, 480, 360);
+    // 2. SOL Analisti (Top-Right)
+    this.createAgentCharacter(solCfg, 760, 320);
+
+    // 3. BTC Analisti (Bottom-Left)
+    this.createAgentCharacter(btcCfg, 380, 460);
+
+    // 4. ETH Analisti (Bottom-Right)
+    this.createAgentCharacter(ethCfg, 580, 460);
   }
 }

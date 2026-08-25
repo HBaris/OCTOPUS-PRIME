@@ -1,37 +1,40 @@
 import { BaseRoomScene } from './BaseRoomScene.ts';
-import { AgentRole } from '../types/events.ts';
 import { AGENT_CONFIGS } from '../config.ts';
 
 export class RiskRoomScene extends BaseRoomScene {
-  protected agentRole: AgentRole = 'Risk Analisti';
-  protected roomName = 'Risk & Korelasyon Analiz Odası';
+  protected roomKey = 'RiskRoomScene';
+  protected roomName = 'Risk Odası (Risk Analisti & Whale Takipçisi)';
 
   constructor() {
     super({ key: 'RiskRoomScene' });
   }
 
   protected createRoomContent(): void {
-    const config = AGENT_CONFIGS.find((a) => a.role === this.agentRole)!;
+    const riskCfg = AGENT_CONFIGS.find((a) => a.role === 'Risk Analisti')!;
+    const whaleCfg = AGENT_CONFIGS.find((a) => a.role === 'Whale Takipçisi')!;
 
-    // Room specific decor: Large Risk Shield Emblem & Servers
-    this.add.image(200, 240, 'risk_shield_emblem');
-    this.add.image(760, 240, 'news_board');
-    this.add.image(80, 240, 'server_rack');
-    this.add.image(880, 240, 'plant_texture');
+    // Risk Room Decor: Shield Emblem, Whale Radar, Server Racks
+    this.add.image(340, 220, 'risk_shield_emblem');
+    this.add.image(640, 220, 'signal_radar_station');
+    this.add.image(60, 240, 'server_rack');
+    this.add.image(900, 240, 'plant_texture');
 
-    this.add.text(200, 290, '🛡️ EMA α=0.3 KORELASYON KALKANI', {
+    this.add.text(340, 270, '🛡️ EMA α=0.3 KORELASYON GÜVENİ', {
       fontFamily: 'monospace',
-      fontSize: '8px',
+      fontSize: '10px',
       color: '#10b981',
     }).setOrigin(0.5);
 
-    this.add.text(760, 290, '📊 15 DAKİKALIK ETKİ DOĞRULAMA', {
+    this.add.text(640, 270, '🐋 BALİNA VE BÜYÜK HACİM RADARI', {
       fontFamily: 'monospace',
-      fontSize: '8px',
-      color: '#34d399',
+      fontSize: '10px',
+      color: '#2dd4bf',
     }).setOrigin(0.5);
 
-    // Agent Character at Center Desk
-    this.createAgentCharacter(config, 480, 360);
+    // 1. Risk Analisti Character (Left Desk)
+    this.createAgentCharacter(riskCfg, 340, 380);
+
+    // 2. Whale Takipçisi Character (Right Desk)
+    this.createAgentCharacter(whaleCfg, 640, 380);
   }
 }

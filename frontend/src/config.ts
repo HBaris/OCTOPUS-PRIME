@@ -19,92 +19,241 @@ export interface AgentVisualConfig {
   avatarIcon: string;
   sceneKey: string;
   roomTitle: string;
-  x: number;
-  y: number;
   bodyColor: number;
   hairColor: number;
   shirtColor: number;
   deskColor: number;
 }
 
+export interface RoomConfig {
+  key: string;
+  name: string;
+  shortName: string;
+  icon: string;
+  agentRoles: AgentRole[];
+}
+
+export const ROOMS: RoomConfig[] = [
+  {
+    key: 'PatronRoomScene',
+    name: 'Yönetim Odası',
+    shortName: 'Yönetim',
+    icon: '🎩',
+    agentRoles: ['Patron', 'Sekreterya'],
+  },
+  {
+    key: 'NewsRoomScene',
+    name: 'Haber Odası',
+    shortName: 'Haber',
+    icon: '📰',
+    agentRoles: ['Haber Takip', 'Makro Ekonomist', 'Düzenleyici İzleyici'],
+  },
+  {
+    key: 'TraderRoomScene',
+    name: 'İşlem Odası',
+    shortName: 'İşlem',
+    icon: '🤖',
+    agentRoles: ['Binance İşlemci', 'Likidite Gözlemcisi'],
+  },
+  {
+    key: 'RiskRoomScene',
+    name: 'Risk Odası',
+    shortName: 'Risk',
+    icon: '🛡️',
+    agentRoles: ['Risk Analisti', 'Whale Takipçisi'],
+  },
+  {
+    key: 'PortfolioRoomScene',
+    name: 'Portföy Odası',
+    shortName: 'Portföy',
+    icon: '💰',
+    agentRoles: ['Portföy Muhasebecisi', 'BTC Analisti', 'ETH Analisti', 'SOL Analisti'],
+  },
+  {
+    key: 'SignalsRoomScene',
+    name: 'Sinyal Odası',
+    shortName: 'Sinyal',
+    icon: '⚡',
+    agentRoles: ['Sinyal Avcısı', 'Teknik Analist'],
+  },
+];
+
 export const AGENT_CONFIGS: AgentVisualConfig[] = [
-  {
-    role: 'Haber Takip',
-    name: 'Haber Takip',
-    avatarIcon: '📰',
-    sceneKey: 'NewsRoomScene',
-    roomTitle: 'Haber Odası',
-    x: 480,
-    y: 350,
-    bodyColor: 0x3b82f6, // Blue
-    hairColor: 0x1e293b,
-    shirtColor: 0x60a5fa,
-    deskColor: 0x475569,
-  },
-  {
-    role: 'Binance İşlemci',
-    name: 'Binance İşlemci',
-    avatarIcon: '🤖',
-    sceneKey: 'TraderRoomScene',
-    roomTitle: 'İşlem Odası',
-    x: 480,
-    y: 350,
-    bodyColor: 0xf59e0b, // Amber / Binance Gold
-    hairColor: 0x0f172a,
-    shirtColor: 0xfbbf24,
-    deskColor: 0x475569,
-  },
-  {
-    role: 'Risk Analisti',
-    name: 'Risk Analisti',
-    avatarIcon: '🛡️',
-    sceneKey: 'RiskRoomScene',
-    roomTitle: 'Risk Odası',
-    x: 480,
-    y: 350,
-    bodyColor: 0x10b981, // Emerald Green
-    hairColor: 0x334155,
-    shirtColor: 0x34d399,
-    deskColor: 0x475569,
-  },
-  {
-    role: 'Portföy Muhasebecisi',
-    name: 'Portföy',
-    avatarIcon: '💰',
-    sceneKey: 'PortfolioRoomScene',
-    roomTitle: 'Portföy Odası',
-    x: 480,
-    y: 350,
-    bodyColor: 0x8b5cf6, // Violet
-    hairColor: 0x4c1d95,
-    shirtColor: 0xa78bfa,
-    deskColor: 0x334155,
-  },
-  {
-    role: 'Sinyal Avcısı',
-    name: 'Sinyal Avcısı',
-    avatarIcon: '⚡',
-    sceneKey: 'SignalsRoomScene',
-    roomTitle: 'Sinyal Odası',
-    x: 480,
-    y: 350,
-    bodyColor: 0xec4899, // Pink / Fuchsia
-    hairColor: 0x831843,
-    shirtColor: 0xf472b6,
-    deskColor: 0x334155,
-  },
+  // 1. Yönetim Odası
   {
     role: 'Patron',
     name: 'Patron (Baş Analist)',
     avatarIcon: '🎩',
     sceneKey: 'PatronRoomScene',
     roomTitle: 'Yönetim Odası',
-    x: 480,
-    y: 350,
-    bodyColor: 0xf59e0b, // Gold tie / accessory
-    hairColor: 0x475569, // Silver-grey / refined
-    shirtColor: 0x1e3a8a, // Deep Navy Suit
-    deskColor: 0x78350f, // Mahogany luxury wood
+    bodyColor: 0xf59e0b, // Gold accessory
+    hairColor: 0x475569, // Silver refined
+    shirtColor: 0x1e3a8a, // Navy Suit
+    deskColor: 0x78350f, // Mahogany luxury
+  },
+  {
+    role: 'Sekreterya',
+    name: 'Sekreterya',
+    avatarIcon: '📋',
+    sceneKey: 'PatronRoomScene',
+    roomTitle: 'Yönetim Odası',
+    bodyColor: 0x3b82f6,
+    hairColor: 0x78350f,
+    shirtColor: 0x93c5fd,
+    deskColor: 0x475569,
+  },
+
+  // 2. Haber Odası
+  {
+    role: 'Haber Takip',
+    name: 'Haber Takip',
+    avatarIcon: '📰',
+    sceneKey: 'NewsRoomScene',
+    roomTitle: 'Haber Odası',
+    bodyColor: 0x3b82f6, // Blue
+    hairColor: 0x1e293b,
+    shirtColor: 0x60a5fa,
+    deskColor: 0x475569,
+  },
+  {
+    role: 'Makro Ekonomist',
+    name: 'Makro Ekonomist',
+    avatarIcon: '🌍',
+    sceneKey: 'NewsRoomScene',
+    roomTitle: 'Haber Odası',
+    bodyColor: 0x0284c7, // Sky Blue
+    hairColor: 0x334155,
+    shirtColor: 0x38bdf8,
+    deskColor: 0x334155,
+  },
+  {
+    role: 'Düzenleyici İzleyici',
+    name: 'Düzenleyici İzleyici',
+    avatarIcon: '⚖️',
+    sceneKey: 'NewsRoomScene',
+    roomTitle: 'Haber Odası',
+    bodyColor: 0x64748b, // Slate
+    hairColor: 0x0f172a,
+    shirtColor: 0x94a3b8,
+    deskColor: 0x334155,
+  },
+
+  // 3. İşlem Odası
+  {
+    role: 'Binance İşlemci',
+    name: 'Binance İşlemci',
+    avatarIcon: '🤖',
+    sceneKey: 'TraderRoomScene',
+    roomTitle: 'İşlem Odası',
+    bodyColor: 0xf59e0b, // Amber / Binance Gold
+    hairColor: 0x0f172a,
+    shirtColor: 0xfbbf24,
+    deskColor: 0x475569,
+  },
+  {
+    role: 'Likidite Gözlemcisi',
+    name: 'Likidite Gözlemcisi',
+    avatarIcon: '💧',
+    sceneKey: 'TraderRoomScene',
+    roomTitle: 'İşlem Odası',
+    bodyColor: 0x06b6d4, // Cyan
+    hairColor: 0x164e63,
+    shirtColor: 0x67e8f9,
+    deskColor: 0x334155,
+  },
+
+  // 4. Risk Odası
+  {
+    role: 'Risk Analisti',
+    name: 'Risk Analisti',
+    avatarIcon: '🛡️',
+    sceneKey: 'RiskRoomScene',
+    roomTitle: 'Risk Odası',
+    bodyColor: 0x10b981, // Emerald Green
+    hairColor: 0x334155,
+    shirtColor: 0x34d399,
+    deskColor: 0x475569,
+  },
+  {
+    role: 'Whale Takipçisi',
+    name: 'Whale Takipçisi',
+    avatarIcon: '🐋',
+    sceneKey: 'RiskRoomScene',
+    roomTitle: 'Risk Odası',
+    bodyColor: 0x0d9488, // Teal
+    hairColor: 0x134e4a,
+    shirtColor: 0x2dd4bf,
+    deskColor: 0x334155,
+  },
+
+  // 5. Portföy Odası
+  {
+    role: 'Portföy Muhasebecisi',
+    name: 'Portföy Muhasebecisi',
+    avatarIcon: '💰',
+    sceneKey: 'PortfolioRoomScene',
+    roomTitle: 'Portföy Odası',
+    bodyColor: 0x8b5cf6, // Violet
+    hairColor: 0x4c1d95,
+    shirtColor: 0xa78bfa,
+    deskColor: 0x334155,
+  },
+  {
+    role: 'BTC Analisti',
+    name: 'BTC Analisti',
+    avatarIcon: '₿',
+    sceneKey: 'PortfolioRoomScene',
+    roomTitle: 'Portföy Odası',
+    bodyColor: 0xf59e0b, // Bitcoin Orange
+    hairColor: 0x78350f,
+    shirtColor: 0xfde047,
+    deskColor: 0x334155,
+  },
+  {
+    role: 'ETH Analisti',
+    name: 'ETH Analisti',
+    avatarIcon: 'Ξ',
+    sceneKey: 'PortfolioRoomScene',
+    roomTitle: 'Portföy Odası',
+    bodyColor: 0x6366f1, // Ethereum Indigo
+    hairColor: 0x312e81,
+    shirtColor: 0x818cf8,
+    deskColor: 0x334155,
+  },
+  {
+    role: 'SOL Analisti',
+    name: 'SOL Analisti',
+    avatarIcon: '◎',
+    sceneKey: 'PortfolioRoomScene',
+    roomTitle: 'Portföy Odası',
+    bodyColor: 0x14f195, // Solana Green
+    hairColor: 0x064e3b,
+    shirtColor: 0x5eead4,
+    deskColor: 0x334155,
+  },
+
+  // 6. Sinyal Odası
+  {
+    role: 'Sinyal Avcısı',
+    name: 'Sinyal Avcısı (Ali)',
+    avatarIcon: '⚡',
+    sceneKey: 'SignalsRoomScene',
+    roomTitle: 'Sinyal Odası',
+    bodyColor: 0xec4899, // Pink / Fuchsia
+    hairColor: 0x831843,
+    shirtColor: 0xf472b6,
+    deskColor: 0x334155,
+  },
+  {
+    role: 'Teknik Analist',
+    name: 'Teknik Analist',
+    avatarIcon: '📐',
+    sceneKey: 'SignalsRoomScene',
+    roomTitle: 'Sinyal Odası',
+    bodyColor: 0x6366f1, // Indigo
+    hairColor: 0x1e1b4b,
+    shirtColor: 0xa5b4fc,
+    deskColor: 0x334155,
   },
 ];
 

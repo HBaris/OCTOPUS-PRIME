@@ -7,7 +7,7 @@ export class BootScene extends Phaser.Scene {
 
   create(): void {
     this.createProceduralTextures();
-    this.scene.start('LobbyScene');
+    this.scene.start('PatronRoomScene');
   }
 
   private createProceduralTextures(): void {

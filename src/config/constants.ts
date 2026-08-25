@@ -9,6 +9,15 @@ export enum AgentRole {
   PORTFOLIO_ACCOUNTANT = 'Portföy Muhasebecisi',
   SIGNAL_HUNTER = 'Sinyal Avcısı',
   PATRON = 'Patron',
+  BTC_ANALYST = 'BTC Analisti',
+  ETH_ANALYST = 'ETH Analisti',
+  SOL_ANALYST = 'SOL Analisti',
+  MACRO_ECONOMIST = 'Makro Ekonomist',
+  WHALE_TRACKER = 'Whale Takipçisi',
+  REGULATORY_WATCHER = 'Düzenleyici İzleyici',
+  TECHNICAL_ANALYST = 'Teknik Analist',
+  LIQUIDITY_OBSERVER = 'Likidite Gözlemcisi',
+  SECRETARY = 'Sekreterya',
 }
 
 export enum AgentState {

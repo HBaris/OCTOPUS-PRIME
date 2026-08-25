@@ -1,32 +1,39 @@
 import { BaseRoomScene } from './BaseRoomScene.ts';
-import { AgentRole } from '../types/events.ts';
 import { AGENT_CONFIGS } from '../config.ts';
 
 export class NewsRoomScene extends BaseRoomScene {
-  protected agentRole: AgentRole = 'Haber Takip';
-  protected roomName = 'Haber Takip Odası (RSS & Küresel Basın)';
+  protected roomKey = 'NewsRoomScene';
+  protected roomName = 'Haber Odası (Haber Takip, Makro & Düzenleme)';
 
   constructor() {
     super({ key: 'NewsRoomScene' });
   }
 
   protected createRoomContent(): void {
-    const config = AGENT_CONFIGS.find((a) => a.role === this.agentRole)!;
+    const newsCfg = AGENT_CONFIGS.find((a) => a.role === 'Haber Takip')!;
+    const macroCfg = AGENT_CONFIGS.find((a) => a.role === 'Makro Ekonomist')!;
+    const regCfg = AGENT_CONFIGS.find((a) => a.role === 'Düzenleyici İzleyici')!;
 
-    // Room specific decor: News Whiteboard & Server Racks
-    this.add.image(200, 240, 'news_board');
-    this.add.image(80, 240, 'server_rack');
-    this.add.image(880, 240, 'server_rack');
-    this.add.image(760, 250, 'plant_texture');
+    // Newsroom Decor: Whiteboards, TV Screens, Server Racks
+    this.add.image(480, 220, 'news_board');
+    this.add.image(60, 240, 'server_rack');
+    this.add.image(900, 240, 'server_rack');
+    this.add.image(300, 220, 'plant_texture');
+    this.add.image(660, 220, 'cooler_texture');
 
-    // Whiteboard Label
-    this.add.text(200, 290, '📰 KÜRESEL BASIN PANOSU', {
+    this.add.text(480, 270, '📰 KÜRESEL BASIN & HABER ANALİZ MERKEZİ', {
       fontFamily: 'monospace',
-      fontSize: '8px',
-      color: '#94a3b8',
+      fontSize: '10px',
+      color: '#38bdf8',
     }).setOrigin(0.5);
 
-    // Agent Character at Center Desk
-    this.createAgentCharacter(config, 480, 360);
+    // 1. Makro Ekonomist (Left Desk)
+    this.createAgentCharacter(macroCfg, 200, 380);
+
+    // 2. Haber Takip (Center Desk)
+    this.createAgentCharacter(newsCfg, 480, 380);
+
+    // 3. Düzenleyici İzleyici (Right Desk)
+    this.createAgentCharacter(regCfg, 760, 380);
   }
 }
