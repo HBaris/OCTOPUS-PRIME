@@ -166,6 +166,9 @@ export class DecisionEngine {
         action === 'BUY' ? 1 : -1
       );
 
+      const suggestedStopLoss = Math.round((action === 'BUY' ? ticker.lastPrice * 0.98 : ticker.lastPrice * 1.02) * 100) / 100;
+      const suggestedTakeProfit = Math.round((action === 'BUY' ? ticker.lastPrice * 1.04 : ticker.lastPrice * 0.96) * 100) / 100;
+
       // Emit TRADE_PROPOSAL event (Safe proposal, NO live order executed)
       eventBus.publish(EventType.TRADE_PROPOSAL, {
         proposalId: `prop_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
@@ -177,6 +180,9 @@ export class DecisionEngine {
         signalScore: signal.signalScore,
         confidence: signal.confidence,
         reasoning: signal.reasoning,
+        sourceCategory: category,
+        suggestedStopLoss,
+        suggestedTakeProfit,
         status: 'SIMULATED',
         isDryRun: true,
         notes: `Otomatik işlem önerisi: Sinyal Skoru ${signalScore}/100 eşik üstünde.`,

@@ -50,4 +50,25 @@ describe('BinanceService', () => {
     expect(capturedLimitWarning.payload.attemptedSizeUsd).toBe(50000.0);
     expect(capturedLimitWarning.payload.actionBlocked).toBe(true);
   });
+
+  it('should store attribution metadata and SL/TP on simulated positions', async () => {
+    const metadata = {
+      signalId: 'sig_test_123',
+      sourceCategory: 'crypto_specific',
+      stopLoss: 67000,
+      takeProfit: 71500,
+    };
+
+    const result = await binance.executeOrder('ETH/USDT', 'BUY', 40.0, 'MARKET', metadata);
+    expect(result.success).toBe(true);
+
+    const positions = await binance.getPositions();
+    const ethPos = positions.find((p) => p.symbol === 'ETH/USDT');
+
+    expect(ethPos).toBeDefined();
+    expect(ethPos?.signalId).toBe('sig_test_123');
+    expect(ethPos?.sourceCategory).toBe('crypto_specific');
+    expect(ethPos?.stopLoss).toBe(67000);
+    expect(ethPos?.takeProfit).toBe(71500);
+  });
 });

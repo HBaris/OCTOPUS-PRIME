@@ -12,26 +12,24 @@ import {
   NewNewsPayload,
   SignalGeneratedPayload,
   SystemStatusPayload,
+  TradeProposalPayload,
 } from '../types/events.ts';
 import { wsService } from '../services/websocket.ts';
 import { apiService } from '../services/api.ts';
 import { formatSignalDialogue } from '../utils/signalDialogue.ts';
-
-interface TradeProposalPayload {
-  proposalId: string;
-  symbol: string;
-  side: 'BUY' | 'SELL';
-  suggestedAmountUsd: number;
-  signalScore: number;
-  reasoning: string;
-  timestamp: string;
-}
 
 interface AgentEntity {
   config: AgentVisualConfig;
   container: Phaser.GameObjects.Container;
   bodySprite: Phaser.GameObjects.Rectangle;
   headSprite: Phaser.GameObjects.Rectangle;
+  leftArm: Phaser.GameObjects.Rectangle;
+  rightArm: Phaser.GameObjects.Rectangle;
+  leftHand: Phaser.GameObjects.Rectangle;
+  rightHand: Phaser.GameObjects.Rectangle;
+  leftEye: Phaser.GameObjects.Rectangle;
+  rightEye: Phaser.GameObjects.Rectangle;
+  mouthGraphics: Phaser.GameObjects.Graphics;
   avatarText: Phaser.GameObjects.Text;
   stateText: Phaser.GameObjects.Text;
   bubbleContainer: Phaser.GameObjects.Container;
@@ -46,6 +44,7 @@ interface AgentEntity {
   currentTask: string;
   monitorSprite: Phaser.GameObjects.Image;
   deskSprite: Phaser.GameObjects.Image;
+  typingTween?: Phaser.Tweens.Tween;
 }
 
 export class OfficeScene extends Phaser.Scene {
@@ -69,6 +68,7 @@ export class OfficeScene extends Phaser.Scene {
   // Trade Proposal Approval Banner
   private proposalContainer!: Phaser.GameObjects.Container;
   private proposalText!: Phaser.GameObjects.Text;
+  private proposalSubText!: Phaser.GameObjects.Text;
   private proposalTimerText!: Phaser.GameObjects.Text;
   private proposalExpiryTimer: Phaser.Time.TimerEvent | null = null;
   private currentProposal: TradeProposalPayload | null = null;
@@ -158,7 +158,7 @@ export class OfficeScene extends Phaser.Scene {
   }
 
   // ==========================================
-  // 2. AGENTS & DESKS SETUP
+  // 2. AGENTS & DETAILED PIXEL ART CHARACTERS
   // ==========================================
   private createDesksAndAgents(): void {
     AGENT_CONFIGS.forEach((config) => {
@@ -186,20 +186,48 @@ export class OfficeScene extends Phaser.Scene {
       // 5. Agent Character Container
       const agentContainer = this.add.container(config.x, config.y - 16);
 
-      // Agent Body (Pixel shape)
-      const body = this.add.rectangle(0, 8, 20, 16, config.shirtColor);
+      // Character Torso / Body (Theme colored clothing)
+      const body = this.add.rectangle(0, 8, 18, 16, config.shirtColor);
       body.setStrokeStyle(1, 0x0f172a);
 
-      // Agent Head
-      const head = this.add.rectangle(0, -6, 16, 14, 0xfde047);
+      // Collar / Tie / Theme Accessory Detail
+      const collar = this.add.rectangle(0, 1, 8, 4, config.bodyColor);
+      const accessory = this.add.rectangle(0, 7, 4, 7, config.bodyColor);
+
+      // Arms & Hands (Distinct from body, placed on desk/keyboard)
+      const leftArm = this.add.rectangle(-12, 7, 6, 12, config.shirtColor);
+      leftArm.setStrokeStyle(1, 0x0f172a);
+      const leftHand = this.add.rectangle(-12, 14, 5, 5, 0xfed7aa);
+      leftHand.setStrokeStyle(1, 0x0f172a);
+
+      const rightArm = this.add.rectangle(12, 7, 6, 12, config.shirtColor);
+      rightArm.setStrokeStyle(1, 0x0f172a);
+      const rightHand = this.add.rectangle(12, 14, 5, 5, 0xfed7aa);
+      rightHand.setStrokeStyle(1, 0x0f172a);
+
+      // Agent Head (Skin Tone)
+      const head = this.add.rectangle(0, -7, 18, 15, 0xfed7aa);
       head.setStrokeStyle(1, 0x0f172a);
 
-      // Agent Hair
-      const hair = this.add.rectangle(0, -12, 18, 6, config.hairColor);
+      // Hair
+      const hair = this.add.rectangle(0, -14, 20, 7, config.hairColor);
+      const hairLeft = this.add.rectangle(-9, -9, 3, 6, config.hairColor);
+      const hairRight = this.add.rectangle(9, -9, 3, 6, config.hairColor);
+
+      // Eye Details (2x3 dark pixels + 1x1 white specular highlight)
+      const leftEye = this.add.rectangle(-4, -8, 2, 3, 0x0f172a);
+      const leftEyeLight = this.add.rectangle(-4, -9, 1, 1, 0xffffff);
+
+      const rightEye = this.add.rectangle(4, -8, 2, 3, 0x0f172a);
+      const rightEyeLight = this.add.rectangle(4, -9, 1, 1, 0xffffff);
+
+      // Procedural Facial Expression (Mouth Graphics)
+      const mouthGraphics = this.add.graphics();
+      this.drawMouth(mouthGraphics, 'IDLE');
 
       // Agent Emoji Badge
-      const emojiBadge = this.add.text(0, -26, config.avatarIcon, {
-        fontSize: '16px',
+      const emojiBadge = this.add.text(0, -28, config.avatarIcon, {
+        fontSize: '15px',
       }).setOrigin(0.5);
 
       // Agent Role Tag
@@ -219,36 +247,36 @@ export class OfficeScene extends Phaser.Scene {
       }).setOrigin(0.5);
 
       // Speech / Thought Bubble (Wider and styled for dialogue)
-      const bubbleContainer = this.add.container(0, -64);
+      const bubbleContainer = this.add.container(0, -68);
       const bubbleBg = this.add.graphics();
-      this.drawBubble(bubbleBg, 150, 36);
+      this.drawBubble(bubbleBg, 154, 38);
       const bubbleText = this.add.text(0, -4, 'Hazırda bekliyor', {
         fontFamily: 'monospace',
         fontSize: '8px',
         color: '#0f172a',
         align: 'center',
-        wordWrap: { width: 140 },
+        wordWrap: { width: 144 },
       }).setOrigin(0.5);
       bubbleContainer.add([bubbleBg, bubbleText]);
       bubbleContainer.setVisible(false);
 
       // Alert Icon (!)
-      const alertIcon = this.add.image(0, -42, 'alert_bubble');
+      const alertIcon = this.add.image(0, -44, 'alert_bubble');
       alertIcon.setVisible(false);
       this.tweens.add({
         targets: alertIcon,
-        y: -48,
+        y: -50,
         duration: 500,
         yoyo: true,
         repeat: -1,
       });
 
       // Trade Badge
-      const tradeIcon = this.add.image(16, -42, 'trading_badge');
+      const tradeIcon = this.add.image(16, -44, 'trading_badge');
       tradeIcon.setVisible(false);
 
       // Spending Limit Warning Badge (🛑)
-      const warningBadge = this.add.container(0, -46);
+      const warningBadge = this.add.container(0, -48);
       const stopImg = this.add.image(0, 0, 'warning_stop');
       const stopText = this.add.text(0, -18, 'LİMİT AŞIMI!', {
         fontFamily: 'monospace',
@@ -258,11 +286,36 @@ export class OfficeScene extends Phaser.Scene {
       warningBadge.add([stopImg, stopText]);
       warningBadge.setVisible(false);
 
-      agentContainer.add([body, head, hair, emojiBadge, roleTagBg, roleText, stateText, alertIcon, tradeIcon, warningBadge, bubbleContainer]);
+      agentContainer.add([
+        leftArm,
+        leftHand,
+        rightArm,
+        rightHand,
+        body,
+        collar,
+        accessory,
+        head,
+        hair,
+        hairLeft,
+        hairRight,
+        leftEye,
+        leftEyeLight,
+        rightEye,
+        rightEyeLight,
+        mouthGraphics,
+        emojiBadge,
+        roleTagBg,
+        roleText,
+        stateText,
+        alertIcon,
+        tradeIcon,
+        warningBadge,
+        bubbleContainer,
+      ]);
 
       // Idle Breathing Animation (1-2px smooth vertical sine wave)
       this.tweens.add({
-        targets: [head, hair, emojiBadge],
+        targets: [head, hair, hairLeft, hairRight, leftEye, leftEyeLight, rightEye, rightEyeLight, mouthGraphics, emojiBadge],
         y: '-=2',
         duration: 1000 + Math.random() * 300,
         yoyo: true,
@@ -299,6 +352,13 @@ export class OfficeScene extends Phaser.Scene {
         container: agentContainer,
         bodySprite: body,
         headSprite: head,
+        leftArm,
+        rightArm,
+        leftHand,
+        rightHand,
+        leftEye,
+        rightEye,
+        mouthGraphics,
         avatarText: emojiBadge,
         stateText,
         bubbleContainer,
@@ -317,6 +377,51 @@ export class OfficeScene extends Phaser.Scene {
 
       this.agents.set(config.role, entity);
     });
+  }
+
+  /**
+   * Procedural facial expression renderer based on agent state
+   */
+  private drawMouth(graphics: Phaser.GameObjects.Graphics, state: AgentState): void {
+    graphics.clear();
+
+    switch (state) {
+      case 'IDLE':
+        // Neutral calm straight line
+        graphics.lineStyle(1, 0x334155, 1);
+        graphics.lineBetween(-3, -3, 3, -3);
+        break;
+
+      case 'ANALYZING':
+        // Thoughtful / slanted pensive line
+        graphics.lineStyle(1.5, 0x1e293b, 1);
+        graphics.lineBetween(-3, -2, 2, -4);
+        break;
+
+      case 'ALERTING':
+        // Surprised open 'O' mouth
+        graphics.fillStyle(0x991b1b, 1);
+        graphics.fillCircle(0, -3, 2.5);
+        graphics.lineStyle(1, 0x0f172a, 1);
+        graphics.strokeCircle(0, -3, 2.5);
+        break;
+
+      case 'TRADING':
+        // Determined, confident smile / smirk
+        graphics.lineStyle(1.5, 0x047857, 1);
+        graphics.beginPath();
+        graphics.arc(0, -5, 3.5, 0.15 * Math.PI, 0.85 * Math.PI, false);
+        graphics.strokePath();
+        break;
+
+      case 'SALUTING':
+        // Wide cheerful happy smile
+        graphics.fillStyle(0x0f172a, 1);
+        graphics.fillCircle(0, -3, 3);
+        graphics.fillStyle(0xffffff, 1);
+        graphics.fillRect(-2, -5, 4, 1.5);
+        break;
+    }
   }
 
   // ==========================================
@@ -472,32 +577,38 @@ export class OfficeScene extends Phaser.Scene {
   }
 
   // ==========================================
-  // 6. MANUEL TRADE PROPOSAL APPROVAL BANNER
+  // 6. MANUEL TRADE PROPOSAL APPROVAL BANNER (WITH SL / TP)
   // ==========================================
   private createTradeProposalBanner(): void {
     const { GAME_WIDTH } = APP_CONFIG;
 
     this.proposalContainer = this.add.container(GAME_WIDTH / 2, 70).setDepth(150);
-    const bg = this.add.rectangle(0, 0, 600, 38, 0x0f172a, 0.98);
+    const bg = this.add.rectangle(0, 0, 620, 42, 0x0f172a, 0.98);
     bg.setStrokeStyle(2, 0xf59e0b);
 
-    this.proposalText = this.add.text(-130, 0, '', {
+    this.proposalText = this.add.text(-120, -7, '', {
       fontFamily: 'monospace',
       fontSize: '9px',
       color: '#fbbf24',
     }).setOrigin(0.5);
 
-    this.proposalTimerText = this.add.text(70, 0, '(30s)', {
+    this.proposalSubText = this.add.text(-120, 9, '', {
+      fontFamily: 'monospace',
+      fontSize: '8px',
+      color: '#94a3b8',
+    }).setOrigin(0.5);
+
+    this.proposalTimerText = this.add.text(90, 0, '(30s)', {
       fontFamily: 'monospace',
       fontSize: '8px',
       color: '#94a3b8',
     }).setOrigin(0.5);
 
     // Onayla Button (Green)
-    const approveBtn = this.add.rectangle(170, 0, 95, 24, 0x10b981, 1);
+    const approveBtn = this.add.rectangle(185, 0, 95, 26, 0x10b981, 1);
     approveBtn.setStrokeStyle(1, 0x34d399);
     approveBtn.setInteractive({ useHandCursor: true });
-    const approveText = this.add.text(170, 0, 'ONAYLA ✅', {
+    const approveText = this.add.text(185, 0, 'ONAYLA ✅', {
       fontFamily: 'monospace',
       fontSize: '8px',
       color: '#ffffff',
@@ -511,10 +622,10 @@ export class OfficeScene extends Phaser.Scene {
     });
 
     // Reddet / Kapat Button
-    const dismissBtn = this.add.rectangle(245, 0, 26, 24, 0xef4444, 1);
+    const dismissBtn = this.add.rectangle(260, 0, 26, 26, 0xef4444, 1);
     dismissBtn.setStrokeStyle(1, 0xf87171);
     dismissBtn.setInteractive({ useHandCursor: true });
-    const dismissText = this.add.text(245, 0, '✕', {
+    const dismissText = this.add.text(260, 0, '✕', {
       fontFamily: 'monospace',
       fontSize: '9px',
       color: '#ffffff',
@@ -524,7 +635,16 @@ export class OfficeScene extends Phaser.Scene {
       this.dismissProposal('İşlem önerisi kullanıcı tarafından reddedildi.');
     });
 
-    this.proposalContainer.add([bg, this.proposalText, this.proposalTimerText, approveBtn, approveText, dismissBtn, dismissText]);
+    this.proposalContainer.add([
+      bg,
+      this.proposalText,
+      this.proposalSubText,
+      this.proposalTimerText,
+      approveBtn,
+      approveText,
+      dismissBtn,
+      dismissText,
+    ]);
     this.proposalContainer.setVisible(false);
   }
 
@@ -536,16 +656,29 @@ export class OfficeScene extends Phaser.Scene {
 
     const normalizedProposal: TradeProposalPayload = {
       proposalId: proposal.proposalId || `prop_${Date.now()}`,
+      signalId: proposal.signalId || '',
       symbol,
       side,
       suggestedAmountUsd: amount,
       signalScore: proposal.signalScore || 75,
       reasoning: proposal.reasoning || proposal.notes || '',
+      sourceCategory: proposal.sourceCategory,
+      suggestedStopLoss: proposal.suggestedStopLoss,
+      suggestedTakeProfit: proposal.suggestedTakeProfit,
       timestamp: proposal.timestamp || new Date().toISOString(),
     };
 
     this.currentProposal = normalizedProposal;
     this.proposalText.setText(`⚡ ÖNERİ: ${side} ${symbol} ($${amount})`);
+
+    const slStr = proposal.suggestedStopLoss ? `SL: $${proposal.suggestedStopLoss.toLocaleString()}` : '';
+    const tpStr = proposal.suggestedTakeProfit ? `TP: $${proposal.suggestedTakeProfit.toLocaleString()}` : '';
+    const catStr = proposal.sourceCategory ? `[${proposal.sourceCategory}]` : '';
+
+    this.proposalSubText.setText(
+      [catStr, slStr, tpStr].filter(Boolean).join(' | ') || 'Algoritmik Strateji'
+    );
+
     this.proposalContainer.setVisible(true);
     this.proposalContainer.setAlpha(0);
     this.proposalContainer.setDepth(150);
@@ -581,16 +714,22 @@ export class OfficeScene extends Phaser.Scene {
   }
 
   private async executeManualProposal(proposal: TradeProposalPayload): Promise<void> {
-    const amount = Number(proposal.suggestedAmountUsd || (proposal as any).estimatedAmountUsd || 50);
+    const amount = Number(proposal.suggestedAmountUsd || proposal.estimatedAmountUsd || 50);
     const result = await apiService.placeOrder(
       proposal.symbol,
       proposal.side,
       amount,
-      'MARKET'
+      'MARKET',
+      {
+        signalId: proposal.signalId,
+        sourceCategory: proposal.sourceCategory,
+        stopLoss: proposal.suggestedStopLoss,
+        takeProfit: proposal.suggestedTakeProfit,
+      }
     );
 
     if (result.success) {
-      this.showBanner(`✅ Emir Testnet'e İletildi: ${proposal.side} ${proposal.symbol} ($${proposal.suggestedAmountUsd})`);
+      this.showBanner(`✅ Emir Testnet'e İletildi: ${proposal.side} ${proposal.symbol} ($${amount})`);
     } else {
       this.showBanner(`❌ Emir İletilemedi: ${result.message}`);
     }
@@ -731,7 +870,7 @@ export class OfficeScene extends Phaser.Scene {
       if (riskAgent && riskAgent.confidenceText) {
         const percent = Math.round(payload.confidenceScore * 100);
         riskAgent.confidenceText.setText(`%${percent}`);
-        
+
         if (percent >= 80) riskAgent.confidenceText.setColor('#10b981');
         else if (percent >= 60) riskAgent.confidenceText.setColor('#facc15');
         else riskAgent.confidenceText.setColor('#ef4444');
@@ -783,6 +922,7 @@ export class OfficeScene extends Phaser.Scene {
           symbol: payload.symbol,
           action: payload.action,
           signalScore: payload.signalScore,
+          category: payload.sourceCategory,
           reasoning: payload.reasoning,
         });
 
@@ -883,10 +1023,22 @@ export class OfficeScene extends Phaser.Scene {
       agent.currentTask = taskDescription;
     }
 
+    // Update facial mouth expression dynamically
+    this.drawMouth(agent.mouthGraphics, state);
+
     agent.alertIcon.setVisible(false);
     agent.tradeIcon.setVisible(false);
     if (role !== 'Sinyal Avcısı' || !this.isAliSpeaking) {
       agent.bubbleContainer.setVisible(false);
+    }
+
+    // Stop previous typing tween if any
+    if (agent.typingTween) {
+      agent.typingTween.stop();
+      agent.typingTween = undefined;
+      agent.leftHand.setY(14);
+      agent.rightHand.setY(14);
+      agent.rightArm.setY(7);
     }
 
     switch (state) {
@@ -901,6 +1053,15 @@ export class OfficeScene extends Phaser.Scene {
         if (role !== 'Sinyal Avcısı' || !this.isAliSpeaking) {
           this.showAgentBubble(agent, taskDescription || 'Analiz ediliyor...');
         }
+        // Typing hands motion on desk
+        agent.typingTween = this.tweens.add({
+          targets: [agent.leftHand, agent.rightHand],
+          y: '-=2',
+          duration: 160,
+          yoyo: true,
+          repeat: -1,
+          ease: 'Sine.easeInOut',
+        });
         break;
 
       case 'ALERTING':
@@ -919,12 +1080,24 @@ export class OfficeScene extends Phaser.Scene {
         if (role !== 'Sinyal Avcısı' || !this.isAliSpeaking) {
           this.showAgentBubble(agent, taskDescription || 'İşlem yürütülüyor');
         }
+        // Rapid typing hands motion
+        agent.typingTween = this.tweens.add({
+          targets: [agent.leftHand, agent.rightHand],
+          y: '-=3',
+          duration: 120,
+          yoyo: true,
+          repeat: -1,
+          ease: 'Sine.easeInOut',
+        });
         break;
 
       case 'SALUTING':
         agent.stateText.setText('👋 SELAM');
         agent.stateText.setColor('#ec4899');
         this.showAgentBubble(agent, taskDescription || 'Selamlar!');
+        // Right hand salute position
+        agent.rightHand.setY(6);
+        agent.rightArm.setY(3);
         break;
     }
   }

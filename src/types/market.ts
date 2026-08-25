@@ -36,11 +36,16 @@ export interface PositionInfo {
   symbol: string;
   amount: number;
   entryPrice: number;
+  currentPrice?: number;
   markPrice: number;
   unrealizedPnl: number;
   percentagePnl: number;
   liquidationPrice?: number;
   side: 'LONG' | 'SHORT';
+  signalId?: string;
+  sourceCategory?: string;
+  stopLoss?: number;
+  takeProfit?: number;
 }
 
 export interface SimulatedOrder {
@@ -53,5 +58,9 @@ export interface SimulatedOrder {
   totalUsd: number;
   status: 'FILLED' | 'CANCELLED' | 'REJECTED';
   timestamp: string;
+  signalId?: string;
+  sourceCategory?: string;
+  stopLoss?: number;
+  takeProfit?: number;
   notes?: string;
 }

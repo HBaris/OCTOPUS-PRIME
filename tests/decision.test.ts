@@ -51,6 +51,9 @@ describe('DecisionEngine', () => {
     expect(capturedProposal).not.toBeNull();
     expect(capturedProposal.payload.side).toBe('BUY');
     expect(capturedProposal.payload.isDryRun).toBe(true);
+    expect(capturedProposal.payload.sourceCategory).toBe('crypto_specific');
+    expect(capturedProposal.payload.suggestedStopLoss).toBeGreaterThan(0);
+    expect(capturedProposal.payload.suggestedTakeProfit).toBeGreaterThan(0);
   });
 
   it('should generate a HOLD signal when news impact is low', async () => {

@@ -70,8 +70,15 @@ export interface PortfolioUpdatePayload {
     amount: number;
     entryPrice: number;
     currentPrice?: number;
+    markPrice?: number;
     unrealizedPnl: number;
+    percentagePnl?: number;
     pnlPercentage?: number;
+    side?: 'LONG' | 'SHORT';
+    signalId?: string;
+    sourceCategory?: string;
+    stopLoss?: number;
+    takeProfit?: number;
   }>;
   totalUnrealizedPnl: number;
   isTestnet?: boolean;
@@ -97,6 +104,28 @@ export interface SignalGeneratedPayload {
   signalScore: number;
   confidence: number;
   reasoning: string;
+  sourceCategory?: string;
+  suggestedStopLoss?: number;
+  suggestedTakeProfit?: number;
+}
+
+export interface TradeProposalPayload {
+  proposalId: string;
+  signalId: string;
+  symbol: string;
+  side: 'BUY' | 'SELL';
+  suggestedAmountUsd?: number;
+  estimatedAmountUsd?: number;
+  signalScore: number;
+  confidence?: number;
+  reasoning?: string;
+  sourceCategory?: string;
+  suggestedStopLoss?: number;
+  suggestedTakeProfit?: number;
+  status?: string;
+  isDryRun?: boolean;
+  notes?: string;
+  timestamp?: string;
 }
 
 export interface SystemStatusPayload {

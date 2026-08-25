@@ -61,11 +61,18 @@ export interface TradeProposalPayload {
   signalId: string;
   symbol: string;
   side: 'BUY' | 'SELL';
+  suggestedAmountUsd?: number;
   estimatedAmountUsd: number;
   signalScore: number;
+  confidence?: number;
+  reasoning?: string;
+  sourceCategory?: string;
+  suggestedStopLoss?: number;
+  suggestedTakeProfit?: number;
   status: 'PENDING_APPROVAL' | 'SIMULATED' | 'BLOCKED_BY_LIMIT' | 'EXECUTED';
   isDryRun: boolean;
   notes: string;
+  timestamp?: string;
 }
 
 export interface RiskConfidencePayload {
@@ -100,9 +107,16 @@ export interface PortfolioUpdatePayload {
     symbol: string;
     amount: number;
     entryPrice: number;
-    currentPrice: number;
+    currentPrice?: number;
+    markPrice?: number;
     unrealizedPnl: number;
-    pnlPercentage: number;
+    percentagePnl?: number;
+    pnlPercentage?: number;
+    side?: 'LONG' | 'SHORT';
+    signalId?: string;
+    sourceCategory?: string;
+    stopLoss?: number;
+    takeProfit?: number;
   }>;
   totalUnrealizedPnl: number;
   isTestnet: boolean;

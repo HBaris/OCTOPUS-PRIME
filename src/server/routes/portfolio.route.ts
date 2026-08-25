@@ -8,6 +8,10 @@ const orderSchema = z.object({
   side: z.enum(['BUY', 'SELL']),
   amountUsd: z.number().positive(),
   orderType: z.enum(['MARKET', 'LIMIT']).default('MARKET'),
+  signalId: z.string().optional(),
+  sourceCategory: z.string().optional(),
+  stopLoss: z.number().positive().optional(),
+  takeProfit: z.number().positive().optional(),
 });
 
 const symbolParamSchema = z.object({
@@ -81,8 +85,13 @@ export function createPortfolioRouter(binanceService: BinanceService): Router {
 
   router.post('/order', validateBody(orderSchema), async (req, res, next) => {
     try {
-      const { symbol, side, amountUsd, orderType } = req.body;
-      const result = await binanceService.executeOrder(symbol, side, amountUsd, orderType);
+      const { symbol, side, amountUsd, orderType, signalId, sourceCategory, stopLoss, takeProfit } = req.body;
+      const result = await binanceService.executeOrder(symbol, side, amountUsd, orderType, {
+        signalId,
+        sourceCategory,
+        stopLoss,
+        takeProfit,
+      });
 
       if (!result.success) {
         res.status(400).json(result);

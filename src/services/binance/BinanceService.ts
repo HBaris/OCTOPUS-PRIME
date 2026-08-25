@@ -249,7 +249,13 @@ export class BinanceService {
     symbol: string,
     side: 'BUY' | 'SELL',
     amountUsd: number,
-    orderType: 'MARKET' | 'LIMIT' = 'MARKET'
+    orderType: 'MARKET' | 'LIMIT' = 'MARKET',
+    metadata?: {
+      signalId?: string;
+      sourceCategory?: string;
+      stopLoss?: number;
+      takeProfit?: number;
+    }
   ): Promise<{ success: boolean; orderId: string; message: string; simulated: boolean }> {
     if (this.clientInitPromise) await this.clientInitPromise;
     const formattedSymbol = symbol.includes('/') ? symbol : `${symbol}/USDT`;
@@ -279,6 +285,10 @@ export class BinanceService {
     const ticker = await this.getTicker(formattedSymbol);
     const coinAmount = Math.round((amountUsd / ticker.lastPrice) * 10000) / 10000;
 
+    // Calculate default SL/TP if not supplied
+    const calculatedStopLoss = metadata?.stopLoss ?? (side === 'BUY' ? Math.round(ticker.lastPrice * 0.98 * 100) / 100 : Math.round(ticker.lastPrice * 1.02 * 100) / 100);
+    const calculatedTakeProfit = metadata?.takeProfit ?? (side === 'BUY' ? Math.round(ticker.lastPrice * 1.04 * 100) / 100 : Math.round(ticker.lastPrice * 0.96 * 100) / 100);
+
     // 2. Real testnet execution if enabled
     if (config.ENABLE_REAL_ORDERS && this.client) {
       try {
@@ -296,6 +306,10 @@ export class BinanceService {
           amount: coinAmount,
           price: ticker.lastPrice,
           totalUsd: amountUsd,
+          signalId: metadata?.signalId,
+          sourceCategory: metadata?.sourceCategory,
+          stopLoss: calculatedStopLoss,
+          takeProfit: calculatedTakeProfit,
         });
 
         logger.info(`✅ Real Testnet Order Executed: ${side} ${coinAmount} ${formattedSymbol} (~$${amountUsd})`);
@@ -327,6 +341,10 @@ export class BinanceService {
       totalUsd: amountUsd,
       status: 'FILLED',
       timestamp: new Date().toISOString(),
+      signalId: metadata?.signalId,
+      sourceCategory: metadata?.sourceCategory,
+      stopLoss: calculatedStopLoss,
+      takeProfit: calculatedTakeProfit,
       notes: 'Dry-run simulated order',
     };
 
@@ -342,6 +360,10 @@ export class BinanceService {
         existing.amount = totalAmount;
         existing.entryPrice = avgPrice;
         existing.markPrice = ticker.lastPrice;
+        if (metadata?.signalId) existing.signalId = metadata.signalId;
+        if (metadata?.sourceCategory) existing.sourceCategory = metadata.sourceCategory;
+        if (calculatedStopLoss) existing.stopLoss = calculatedStopLoss;
+        if (calculatedTakeProfit) existing.takeProfit = calculatedTakeProfit;
       } else {
         this.simulatedPositions.set(formattedSymbol, {
           symbol: formattedSymbol,
@@ -351,6 +373,10 @@ export class BinanceService {
           unrealizedPnl: 0,
           percentagePnl: 0,
           side: 'LONG',
+          signalId: metadata?.signalId,
+          sourceCategory: metadata?.sourceCategory,
+          stopLoss: calculatedStopLoss,
+          takeProfit: calculatedTakeProfit,
         });
       }
     } else {

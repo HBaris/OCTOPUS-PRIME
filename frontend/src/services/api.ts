@@ -70,13 +70,28 @@ export const apiService = {
     symbol: string,
     side: 'BUY' | 'SELL',
     amountUsd: number,
-    orderType: 'MARKET' | 'LIMIT' = 'MARKET'
+    orderType: 'MARKET' | 'LIMIT' = 'MARKET',
+    metadata?: {
+      signalId?: string;
+      sourceCategory?: string;
+      stopLoss?: number;
+      takeProfit?: number;
+    }
   ): Promise<{ success: boolean; message: string; orderId?: string }> {
     try {
       const response = await fetch(`${APP_CONFIG.REST_API_URL}/portfolio/order`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ symbol, side, amountUsd, orderType }),
+        body: JSON.stringify({
+          symbol,
+          side,
+          amountUsd,
+          orderType,
+          signalId: metadata?.signalId,
+          sourceCategory: metadata?.sourceCategory,
+          stopLoss: metadata?.stopLoss,
+          takeProfit: metadata?.takeProfit,
+        }),
       });
 
       const data = await response.json();

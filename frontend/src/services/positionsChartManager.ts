@@ -1,4 +1,13 @@
-import { createChart, CandlestickSeries, IChartApi, ISeriesApi, CandlestickData, ColorType, Time } from 'lightweight-charts';
+import {
+  createChart,
+  CandlestickSeries,
+  IChartApi,
+  ISeriesApi,
+  CandlestickData,
+  ColorType,
+  Time,
+  IPriceLine,
+} from 'lightweight-charts';
 import { wsService } from './websocket.ts';
 import { apiService } from './api.ts';
 import { PortfolioUpdatePayload, SystemStatusPayload } from '../types/events.ts';
@@ -8,9 +17,14 @@ interface PositionItem {
   amount: number;
   entryPrice: number;
   currentPrice?: number;
+  markPrice?: number;
   unrealizedPnl: number;
   percentagePnl?: number;
   side?: string;
+  signalId?: string;
+  sourceCategory?: string;
+  stopLoss?: number;
+  takeProfit?: number;
 }
 
 interface PositionCardState {
@@ -24,7 +38,11 @@ interface PositionCardState {
   pnlEl: HTMLElement;
   sideTagEl: HTMLElement;
   entryEl: HTMLElement;
+  sourceEl: HTMLElement;
+  sltpContainerEl: HTMLElement;
   resizeObserver: ResizeObserver;
+  stopLossLine?: IPriceLine;
+  takeProfitLine?: IPriceLine;
 }
 
 export class PositionsChartManager {
@@ -141,7 +159,10 @@ export class PositionsChartManager {
 
     const pnlEl = document.createElement('span');
     const pnlSign = pos.unrealizedPnl >= 0 ? '+' : '';
-    const pnlPercent = pos.percentagePnl !== undefined ? pos.percentagePnl : (pos.unrealizedPnl / (pos.entryPrice * (pos.amount || 1))) * 100;
+    const pnlPercent =
+      pos.percentagePnl !== undefined
+        ? pos.percentagePnl
+        : (pos.unrealizedPnl / (pos.entryPrice * (pos.amount || 1))) * 100;
     pnlEl.className = `card-pnl ${pos.unrealizedPnl >= 0 ? 'positive' : 'negative'}`;
     pnlEl.textContent = `${pnlSign}$${pos.unrealizedPnl.toFixed(2)} (${pnlSign}${pnlPercent.toFixed(2)}%)`;
 
@@ -152,6 +173,34 @@ export class PositionsChartManager {
     headerEl.appendChild(statsEl);
     cardEl.appendChild(headerEl);
 
+    // SL/TP Badge Row (Header Sub-bar)
+    const sltpContainerEl = document.createElement('div');
+    sltpContainerEl.className = 'card-sltp-row';
+    sltpContainerEl.style.cssText =
+      'display: flex; justify-content: space-between; align-items: center; padding: 4px 12px; background: #111a2e; border-bottom: 1px solid #1e293b;';
+
+    const sourceEl = document.createElement('span');
+    sourceEl.className = 'source-label';
+    sourceEl.textContent = `⚡ Kaynak: ${this.formatCategory(pos.sourceCategory)}`;
+
+    const sltpBadges = document.createElement('div');
+    sltpBadges.style.cssText = 'display: flex; gap: 6px; align-items: center;';
+
+    const slTag = document.createElement('span');
+    slTag.className = 'sltp-tag sl';
+    slTag.textContent = pos.stopLoss ? `SL: $${pos.stopLoss.toLocaleString()}` : `SL: $${(pos.entryPrice * 0.98).toFixed(1)}`;
+
+    const tpTag = document.createElement('span');
+    tpTag.className = 'sltp-tag tp';
+    tpTag.textContent = pos.takeProfit ? `TP: $${pos.takeProfit.toLocaleString()}` : `TP: $${(pos.entryPrice * 1.04).toFixed(1)}`;
+
+    sltpBadges.appendChild(slTag);
+    sltpBadges.appendChild(tpTag);
+
+    sltpContainerEl.appendChild(sourceEl);
+    sltpContainerEl.appendChild(sltpBadges);
+    cardEl.appendChild(sltpContainerEl);
+
     // Chart Container
     const chartContainerEl = document.createElement('div');
     chartContainerEl.className = 'card-chart-container';
@@ -160,7 +209,7 @@ export class PositionsChartManager {
     // Footer
     const footerEl = document.createElement('div');
     footerEl.className = 'card-footer';
-    
+
     const entryEl = document.createElement('span');
     entryEl.className = 'entry-label';
     entryEl.textContent = `Giriş: $${pos.entryPrice.toLocaleString()} | Miktar: ${pos.amount}`;
@@ -197,8 +246,8 @@ export class PositionsChartManager {
       rightPriceScale: {
         borderColor: '#334155',
         scaleMargins: {
-          top: 0.15,
-          bottom: 0.15,
+          top: 0.18,
+          bottom: 0.18,
         },
       },
       crosshair: {
@@ -217,6 +266,35 @@ export class PositionsChartManager {
 
     // Initial Candle Data Fetch
     this.loadCandles(pos.symbol, series, chart);
+
+    // 3. Draw Stop-Loss and Take-Profit Reference Lines on the Chart
+    const stopLossPrice = pos.stopLoss || (side === 'LONG' ? pos.entryPrice * 0.98 : pos.entryPrice * 1.02);
+    const takeProfitPrice = pos.takeProfit || (side === 'LONG' ? pos.entryPrice * 1.04 : pos.entryPrice * 0.96);
+
+    let stopLossLine: IPriceLine | undefined;
+    let takeProfitLine: IPriceLine | undefined;
+
+    try {
+      stopLossLine = series.createPriceLine({
+        price: stopLossPrice,
+        color: '#ef4444',
+        lineWidth: 1,
+        lineStyle: 2, // Dashed
+        axisLabelVisible: true,
+        title: 'SL',
+      });
+
+      takeProfitLine = series.createPriceLine({
+        price: takeProfitPrice,
+        color: '#10b981',
+        lineWidth: 1,
+        lineStyle: 2, // Dashed
+        axisLabelVisible: true,
+        title: 'TP',
+      });
+    } catch (err) {
+      console.warn('[PositionsChart] Error creating SL/TP price lines:', err);
+    }
 
     // 30s Polling Interval for chart updates
     const pollInterval = setInterval(() => {
@@ -250,8 +328,21 @@ export class PositionsChartManager {
       pnlEl,
       sideTagEl,
       entryEl,
+      sourceEl,
+      sltpContainerEl,
       resizeObserver,
+      stopLossLine,
+      takeProfitLine,
     });
+  }
+
+  private formatCategory(category?: string): string {
+    if (!category) return 'Algoritmik';
+    if (category === 'crypto_specific') return 'Kripto Özel';
+    if (category === 'defcon_1') return 'DEFCON 1';
+    if (category === 'geopolitical') return 'Jeopolitik';
+    if (category === 'macro_economic') return 'Makroekonomi';
+    return category;
   }
 
   private async loadCandles(
@@ -286,11 +377,23 @@ export class PositionsChartManager {
     state.priceEl.textContent = `$${curPrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
 
     const pnlSign = isProfit ? '+' : '';
-    const pnlPercent = pos.percentagePnl !== undefined ? pos.percentagePnl : (pos.unrealizedPnl / (pos.entryPrice * (pos.amount || 1))) * 100;
+    const pnlPercent =
+      pos.percentagePnl !== undefined
+        ? pos.percentagePnl
+        : (pos.unrealizedPnl / (pos.entryPrice * (pos.amount || 1))) * 100;
     state.pnlEl.className = `card-pnl ${isProfit ? 'positive' : 'negative'}`;
     state.pnlEl.textContent = `${pnlSign}$${pos.unrealizedPnl.toFixed(2)} (${pnlSign}${pnlPercent.toFixed(2)}%)`;
 
     state.entryEl.textContent = `Giriş: $${pos.entryPrice.toLocaleString()} | Miktar: ${pos.amount}`;
+    state.sourceEl.textContent = `⚡ Kaynak: ${this.formatCategory(pos.sourceCategory)}`;
+
+    // Update SL/TP reference lines if changed
+    if (pos.stopLoss && state.stopLossLine) {
+      state.stopLossLine.applyOptions({ price: pos.stopLoss });
+    }
+    if (pos.takeProfit && state.takeProfitLine) {
+      state.takeProfitLine.applyOptions({ price: pos.takeProfit });
+    }
   }
 
   private removePositionCard(symbol: string, cardState: PositionCardState): void {
@@ -298,6 +401,12 @@ export class PositionsChartManager {
 
     try {
       cardState.resizeObserver.disconnect();
+      if (cardState.stopLossLine) {
+        cardState.series.removePriceLine(cardState.stopLossLine);
+      }
+      if (cardState.takeProfitLine) {
+        cardState.series.removePriceLine(cardState.takeProfitLine);
+      }
       cardState.chart.remove();
     } catch (e) {
       // Ignored

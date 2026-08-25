@@ -306,3 +306,33 @@ body {
   font-family: 'VT323', monospace;
   font-size: 13px;
 }
+
+.source-label {
+  font-family: 'monospace';
+  font-size: 8px;
+  color: #38bdf8;
+  background: #111a2e;
+  padding: 2px 6px;
+  border-radius: 3px;
+  border: 1px solid #1e293b;
+}
+
+.sltp-tag {
+  font-family: monospace;
+  font-size: 8px;
+  padding: 1px 4px;
+  border-radius: 2px;
+  font-weight: bold;
+}
+
+.sltp-tag.sl {
+  color: #f87171;
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+}
+
+.sltp-tag.tp {
+  color: #34d399;
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+}
