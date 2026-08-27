@@ -92,6 +92,24 @@ export function createSpecialistAgentInfos(): Partial<Record<AgentRole, AgentInf
       lastActive: new Date().toISOString(),
       stats: { actionsCount: 0, customMetric: '0 operasyon özeti' },
     },
+    [AgentRole.OPS_ASSISTANT]: {
+      role: AgentRole.OPS_ASSISTANT,
+      name: 'Görev Takipçisi',
+      avatarIcon: '📌',
+      state: AgentState.IDLE,
+      currentTask: 'Tüm odalardaki 15+ ajanın anlık görevleri ve alarmları kayıt altında',
+      lastActive: new Date().toISOString(),
+      stats: { actionsCount: 0, customMetric: '0 görev kaydedildi' },
+    },
+    [AgentRole.EXECUTIVE_BRIEFER]: {
+      role: AgentRole.EXECUTIVE_BRIEFER,
+      name: 'Baş Danışman',
+      avatarIcon: '🧠',
+      state: AgentState.IDLE,
+      currentTask: 'Kaçırılan haberler, DEFCON ve piyasa brifingi hazır',
+      lastActive: new Date().toISOString(),
+      stats: { actionsCount: 0, customMetric: '0 yönetici brifingi' },
+    },
   };
 }
 
@@ -235,12 +253,22 @@ export class SpecialistAgentsManager {
     });
   }
 
-  // 9. Sekreterya (Every 10 events)
+  // 9. Sekreterya & Kişisel Asistan Takımı (Görev Takipçisi & Baş Danışman)
   private checkSecretarySummary(): void {
-    if (this.totalEventsProcessed % 10 === 0) {
+    if (this.totalEventsProcessed % 8 === 0) {
       const details = `Son dönemde ${this.newsCount} haber, ${this.signalsCount} sinyal, ${this.ordersCount} işlem işlendi.`;
       this.updateAgentStateFn(AgentRole.SECRETARY, AgentState.ANALYZING, details);
       this.emitAgentActionFn(AgentRole.SECRETARY, 'Operasyon Özeti', 'COMPLETED', details);
+
+      // Görev Takipçisi
+      const taskDetails = `Kaptan için tüm odaların ${this.totalEventsProcessed} operasyon kaydı arşivlendi.`;
+      this.updateAgentStateFn(AgentRole.OPS_ASSISTANT, AgentState.ANALYZING, taskDetails);
+      this.emitAgentActionFn(AgentRole.OPS_ASSISTANT, 'Görev Takip Denetimi', 'COMPLETED', taskDetails);
+
+      // Baş Danışman
+      const execDetails = `Yönetici brifingi güncellendi: ${this.newsCount} haber analiz edildi, piyasa nabzı hazır.`;
+      this.updateAgentStateFn(AgentRole.EXECUTIVE_BRIEFER, AgentState.ANALYZING, execDetails);
+      this.emitAgentActionFn(AgentRole.EXECUTIVE_BRIEFER, 'Yönetici Brifingi', 'COMPLETED', execDetails);
     }
   }
 }

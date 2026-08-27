@@ -6,6 +6,7 @@ export class PixelCharacterGenerator {
   public static generateAllAgentTextures(scene: Phaser.Scene): void {
     const states: AgentState[] = ['IDLE', 'ANALYZING', 'ALERTING', 'TRADING', 'SALUTING'];
 
+    // 1. Generate Seated Agent Workstations (128x112)
     AGENT_CONFIGS.forEach((cfg) => {
       states.forEach((st) => {
         const textureKey = this.getTextureKey(cfg.role, st);
@@ -19,11 +20,371 @@ export class PixelCharacterGenerator {
         }
       });
     });
+
+    // 2. Generate Empty Workstations (When agent is wandering)
+    [false, true].forEach((isPatron) => {
+      const emptyKey = this.getEmptyTextureKey(isPatron);
+      if (!scene.textures.exists(emptyKey)) {
+        const canvas = scene.textures.createCanvas(emptyKey, 128, 112);
+        if (canvas) {
+          const ctx = canvas.getContext();
+          this.drawEmptyWorkstation(ctx, isPatron);
+          canvas.refresh();
+        }
+      }
+    });
+
+    // 3. Generate Standing/Walking Characters for Idle Wandering (96x120 full adult scale)
+    const activities = ['coffee', 'papers', 'smoke', 'tablet', 'normal'];
+    AGENT_CONFIGS.forEach((cfg) => {
+      activities.forEach((act) => {
+        [true, false].forEach((facingLeft) => {
+          const walkKey = this.getWalkingTextureKey(cfg.role, act, facingLeft);
+          if (!scene.textures.exists(walkKey)) {
+            const canvas = scene.textures.createCanvas(walkKey, 96, 120);
+            if (canvas) {
+              const ctx = canvas.getContext();
+              this.drawWalkingCharacter(ctx, cfg.role, act, facingLeft);
+              canvas.refresh();
+            }
+          }
+        });
+      });
+    });
   }
 
   public static getTextureKey(role: AgentRole, state: AgentState): string {
     const safeRole = role.replace(/[\s()]/g, '_');
     return `workstation_v2_${safeRole}_${state}`;
+  }
+
+  public static getEmptyTextureKey(isPatron: boolean): string {
+    return isPatron ? 'workstation_v2_empty_patron' : 'workstation_v2_empty_standard';
+  }
+
+  public static getWalkingTextureKey(role: AgentRole, activity: string, facingLeft: boolean): string {
+    const safeRole = role.replace(/[\s()]/g, '_');
+    return `walking_v2_${safeRole}_${activity}_${facingLeft ? 'l' : 'r'}`;
+  }
+
+  private static drawEmptyWorkstation(ctx: CanvasRenderingContext2D, isPatron: boolean): void {
+    ctx.imageSmoothingEnabled = false;
+
+    // Floor drop shadows
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+    ctx.beginPath();
+    ctx.ellipse(40, 104, 28, 6, -0.05, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(92, 104, 30, 6, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    this.drawEnlargedDiagonalDesk(ctx, isPatron);
+    this.drawEnlargedDiagonalChair(ctx, isPatron);
+    this.drawDesktopItems(ctx, 'IDLE', isPatron);
+  }
+
+  private static drawWalkingCharacter(
+    ctx: CanvasRenderingContext2D,
+    role: AgentRole,
+    activity: string,
+    facingLeft: boolean
+  ): void {
+    ctx.imageSmoothingEnabled = false;
+    const palette = this.getAgentPalette(role);
+    const isPatron = role === 'Patron';
+
+    const cx = 48;
+
+    // 1. Drop shadow on floor
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+    ctx.beginPath();
+    ctx.ellipse(cx, 110, 24, 6, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 2. Walking Legs & Trousers (Full height & width matching seated character)
+    const legColor = palette.trousersColor || '#1e293b';
+    ctx.fillStyle = '#090d16'; // Outline
+    ctx.fillRect(facingLeft ? cx + 2 : cx - 14, 70, 12, 34);
+    ctx.fillRect(facingLeft ? cx - 14 : cx + 2, 70, 12, 34);
+
+    ctx.fillStyle = legColor;
+    ctx.fillRect(facingLeft ? cx + 3 : cx - 13, 71, 10, 32);
+    ctx.fillRect(facingLeft ? cx - 13 : cx + 3, 71, 10, 32);
+
+    // Leather Dress Shoes on Floor
+    ctx.fillStyle = '#090d16';
+    ctx.beginPath();
+    ctx.roundRect(facingLeft ? cx - 18 : cx + 2, 102, 16, 7, [4, 6, 1, 1]);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.roundRect(facingLeft ? cx + 2 : cx - 16, 102, 15, 7, [4, 6, 1, 1]);
+    ctx.fill();
+
+    ctx.fillStyle = '#475569';
+    ctx.fillRect(facingLeft ? cx - 16 : cx + 4, 103, 11, 2);
+    ctx.fillRect(facingLeft ? cx + 4 : cx - 14, 103, 10, 2);
+
+    // 3. Torso & Theme Suit / Jacket (Full 34x36 proportions)
+    ctx.fillStyle = '#090d16'; // Outline
+    ctx.beginPath();
+    ctx.roundRect(cx - 17, 36, 34, 36, [8, 8, 4, 4]);
+    ctx.fill();
+
+    ctx.fillStyle = palette.jacketDark;
+    ctx.beginPath();
+    ctx.roundRect(cx - 15, 38, 30, 33, [7, 7, 3, 3]);
+    ctx.fill();
+
+    ctx.fillStyle = palette.jacketBase;
+    ctx.beginPath();
+    ctx.roundRect(cx - 14, 39, 28, 31, [6, 6, 2, 2]);
+    ctx.fill();
+
+    // Shoulder highlight
+    ctx.fillStyle = palette.jacketLight;
+    ctx.fillRect(cx - 12, 39, 24, 3.5);
+
+    // White Shirt V-Neck & Tie
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.moveTo(cx - 6, 39);
+    ctx.lineTo(cx + 6, 39);
+    ctx.lineTo(cx, 52);
+    ctx.closePath();
+    ctx.fill();
+
+    // Tie
+    ctx.fillStyle = palette.tieColor;
+    ctx.fillRect(cx - 2.5, 41, 5, 20);
+
+    if (palette.goldTrim) {
+      ctx.fillStyle = '#fbbf24';
+      ctx.fillRect(cx - 12, 42, 2.5, 26);
+      ctx.fillRect(cx + 9.5, 42, 2.5, 26);
+      ctx.fillRect(cx - 2, 50, 4, 2.5); // Gold tie clip
+    }
+
+    // 4. Head, Face & Hair (Full 30x28 head matching seated agent scale exactly)
+    const headX = cx - 15;
+    const headY = 8;
+
+    // Head base outline
+    ctx.fillStyle = '#090d16';
+    ctx.beginPath();
+    ctx.roundRect(headX - 1, headY - 1, 32, 30, 6);
+    ctx.fill();
+
+    // Skin Tone
+    ctx.fillStyle = palette.skinTone;
+    ctx.beginPath();
+    ctx.roundRect(headX, headY, 30, 28, 5);
+    ctx.fill();
+
+    // Hair
+    ctx.fillStyle = palette.hairBase;
+    ctx.beginPath();
+    ctx.roundRect(headX - 2, headY - 3, 34, 12, [8, 8, 2, 2]);
+    ctx.fill();
+    ctx.fillStyle = palette.hairLight;
+    ctx.fillRect(headX + 2, headY - 2, 18, 3);
+
+    // Sideburns
+    ctx.fillStyle = palette.hairBase;
+    ctx.fillRect(facingLeft ? headX + 24 : headX + 1, headY + 8, 4, 10);
+
+    // Expressive Eyes (Looking towards walk direction)
+    const eyeDir = facingLeft ? -3 : 3;
+    const eye1X = cx - 8 + eyeDir;
+    const eye2X = cx + 3 + eyeDir;
+
+    // Eyebrows
+    ctx.fillStyle = palette.hairDark;
+    ctx.fillRect(eye1X - 1, headY + 8, 6, 2);
+    ctx.fillRect(eye2X - 1, headY + 8, 6, 2);
+
+    // White Sclera
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(eye1X, headY + 11, 5, 5);
+    ctx.fillRect(eye2X, headY + 11, 5, 5);
+
+    // Colored Iris
+    ctx.fillStyle = palette.eyeColor;
+    ctx.fillRect(eye1X + (facingLeft ? 0 : 2), headY + 11, 3, 5);
+    ctx.fillRect(eye2X + (facingLeft ? 0 : 2), headY + 11, 3, 5);
+
+    // Pupil
+    ctx.fillStyle = '#090d16';
+    ctx.fillRect(eye1X + (facingLeft ? 0 : 2), headY + 12, 1.5, 3);
+    ctx.fillRect(eye2X + (facingLeft ? 0 : 2), headY + 12, 1.5, 3);
+
+    // White glint
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(eye1X + (facingLeft ? 2 : 1), headY + 11, 1, 1.5);
+    ctx.fillRect(eye2X + (facingLeft ? 2 : 1), headY + 11, 1, 1.5);
+
+    // Mouth
+    ctx.fillStyle = '#991b1b';
+    ctx.fillRect(cx - 2 + eyeDir, headY + 20, 5, 2);
+
+    // Role-specific accessories on walking character
+    if (isPatron) {
+      // Top hat / fedora
+      ctx.fillStyle = '#291102';
+      ctx.fillRect(headX - 6, headY - 4, 42, 4); // Brim
+      ctx.fillRect(headX + 1, headY - 14, 28, 11); // Crown
+      ctx.fillStyle = '#fbbf24';
+      ctx.fillRect(headX + 1, headY - 5, 28, 2.5); // Gold band
+
+      // Mustache
+      ctx.fillStyle = '#451a03';
+      ctx.fillRect(cx - 5 + eyeDir, headY + 17, 10, 3);
+    } else if (['Risk Analisti', 'Makro Ekonomist', 'Portföy Muhasebecisi', 'Sekreterya', 'Teknik Analist'].includes(role)) {
+      // Spectacles / Glasses
+      ctx.strokeStyle = role === 'Portföy Muhasebecisi' ? '#fbbf24' : '#38bdf8';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(eye1X - 2, headY + 9, 8, 8);
+      ctx.strokeRect(eye2X - 2, headY + 9, 8, 8);
+      ctx.beginPath();
+      ctx.moveTo(eye1X + 6, headY + 12);
+      ctx.lineTo(eye2X - 2, headY + 12);
+      ctx.stroke();
+    } else if (['Binance İşlemci', 'Sinyal Avcısı', 'Whale Takipçisi'].includes(role)) {
+      // Professional Trader Headset with Mic
+      const earColor = role === 'Sinyal Avcısı' ? '#ec4899' : role === 'Binance İşlemci' ? '#f59e0b' : '#2dd4bf';
+      ctx.fillStyle = '#1e293b';
+      ctx.beginPath();
+      ctx.roundRect(headX - 3, headY - 4, 36, 4, 2);
+      ctx.fill();
+
+      ctx.fillStyle = earColor;
+      ctx.fillRect(headX - 4, headY + 6, 5, 12);
+      ctx.fillRect(headX + 29, headY + 6, 5, 12);
+
+      // Mic boom
+      ctx.fillStyle = '#64748b';
+      ctx.fillRect(facingLeft ? headX - 4 : headX + 24, headY + 18, 10, 2.5);
+      ctx.fillStyle = earColor;
+      ctx.fillRect(facingLeft ? headX - 6 : headX + 32, headY + 17, 4, 4);
+    } else if (role === 'Haber Takip') {
+      // Pencil behind ear & Press card
+      ctx.fillStyle = '#fbbf24';
+      ctx.fillRect(facingLeft ? headX + 26 : headX + 1, headY + 2, 3.5, 12);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(cx - 10, 48, 8, 10);
+      ctx.fillStyle = '#0284c7';
+      ctx.fillRect(cx - 9, 49, 6, 4);
+    }
+
+    // 5. Activity Held Item & Arms (Scaled up with rich details)
+    const armColor = palette.jacketBase;
+    const handColor = palette.skinTone;
+
+    if (activity === 'coffee') {
+      // Holding Steaming Ceramic Coffee Mug
+      const mugX = facingLeft ? cx - 24 : cx + 12;
+      const mugY = 44;
+
+      // Arm reaching forward
+      ctx.fillStyle = armColor;
+      ctx.fillRect(facingLeft ? cx - 14 : cx + 4, 40, 12, 9);
+      ctx.fillStyle = handColor;
+      ctx.fillRect(facingLeft ? cx - 18 : cx + 10, 47, 6, 6);
+
+      // Ceramic Mug (12x14)
+      ctx.fillStyle = '#f8fafc';
+      ctx.beginPath();
+      ctx.roundRect(mugX, mugY, 12, 13, 3);
+      ctx.fill();
+      // Coffee inside top
+      ctx.fillStyle = '#451a03';
+      ctx.fillRect(mugX + 1, mugY + 1, 10, 3);
+      // Mug Handle
+      ctx.strokeStyle = '#f8fafc';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(facingLeft ? mugX - 3 : mugX + 10, mugY + 3, 4, 7);
+
+      // Rising Steam Wisps
+      ctx.fillStyle = 'rgba(241, 245, 249, 0.8)';
+      ctx.fillRect(mugX + 3, mugY - 5, 2.5, 4);
+      ctx.fillRect(mugX + 6, mugY - 9, 2.5, 4);
+      ctx.fillRect(mugX + 8, mugY - 13, 2.5, 4);
+    } else if (activity === 'papers') {
+      // Holding stack of Manila Folders & Documents
+      const folderX = facingLeft ? cx - 24 : cx + 6;
+      const folderY = 42;
+
+      ctx.fillStyle = armColor;
+      ctx.fillRect(facingLeft ? cx - 12 : cx + 2, 40, 12, 9);
+      ctx.fillStyle = handColor;
+      ctx.fillRect(facingLeft ? cx - 16 : cx + 6, 50, 6, 6);
+
+      // Manila folder (18x20)
+      ctx.fillStyle = '#f59e0b';
+      ctx.beginPath();
+      ctx.roundRect(folderX, folderY, 18, 20, 3);
+      ctx.fill();
+      // White paper sheets edge inside
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(folderX + 3, folderY - 4, 12, 18);
+      // Red Confidential / Secret stamp
+      ctx.fillStyle = '#ef4444';
+      ctx.fillRect(folderX + 4, folderY + 6, 10, 3.5);
+    } else if (activity === 'smoke') {
+      // Cigarette Break with Swirling Smoke
+      const cigX = facingLeft ? cx - 22 : cx + 10;
+      const cigY = 32;
+
+      ctx.fillStyle = armColor;
+      ctx.fillRect(facingLeft ? cx - 12 : cx + 2, 38, 9, 11);
+      ctx.fillStyle = handColor;
+      ctx.fillRect(facingLeft ? cx - 16 : cx + 8, 33, 6, 6);
+
+      // Cigarette white stick & glowing red tip
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(cigX, cigY, 9, 3);
+      ctx.fillStyle = '#ef4444';
+      ctx.fillRect(facingLeft ? cigX : cigX + 7, cigY, 3, 3);
+
+      // Smoke swirls
+      ctx.fillStyle = 'rgba(226, 232, 240, 0.75)';
+      ctx.beginPath();
+      ctx.arc(facingLeft ? cigX - 4 : cigX + 12, cigY - 5, 4, 0, Math.PI * 2);
+      ctx.arc(facingLeft ? cigX - 8 : cigX + 17, cigY - 12, 6, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (activity === 'tablet') {
+      // Glowing Futuristic Cyber Tablet
+      const tabX = cx - 10;
+      const tabY = 44;
+
+      ctx.fillStyle = armColor;
+      ctx.fillRect(cx - 15, 40, 6, 12);
+      ctx.fillRect(cx + 9, 40, 6, 12);
+      ctx.fillStyle = handColor;
+      ctx.fillRect(cx - 12, 50, 5, 5);
+      ctx.fillRect(cx + 7, 50, 5, 5);
+
+      // Tablet chassis (20x15)
+      ctx.fillStyle = '#0f172a';
+      ctx.beginPath();
+      ctx.roundRect(tabX, tabY, 20, 15, 3);
+      ctx.fill();
+      // Glowing neon cyan screen
+      ctx.fillStyle = '#38bdf8';
+      ctx.fillRect(tabX + 1.5, tabY + 1.5, 17, 12);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(tabX + 3, tabY + 4, 12, 1.5);
+      ctx.fillRect(tabX + 3, tabY + 7, 9, 1.5);
+      ctx.fillRect(tabX + 3, tabY + 10, 13, 1.5);
+    } else {
+      // Normal walking with natural arm swinging
+      ctx.fillStyle = armColor;
+      ctx.fillRect(cx - 14, 40, 6, 20);
+      ctx.fillRect(cx + 8, 40, 6, 20);
+      ctx.fillStyle = handColor;
+      ctx.fillRect(cx - 14, 58, 6, 6);
+      ctx.fillRect(cx + 8, 58, 6, 6);
+    }
   }
 
   private static drawEnlargedDiagonalWorkstation(
@@ -580,8 +941,8 @@ export class PixelCharacterGenerator {
     role: AgentRole
   ): void {
     // 1. Glasses / Spectacles
-    if (['Risk Analisti', 'Makro Ekonomist', 'Portföy Muhasebecisi', 'Sekreterya', 'Teknik Analist'].includes(role)) {
-      ctx.strokeStyle = role === 'Portföy Muhasebecisi' ? '#fbbf24' : '#38bdf8';
+    if (['Risk Analisti', 'Makro Ekonomist', 'Portföy Muhasebecisi', 'Sekreterya', 'Teknik Analist', 'Görev Takipçisi', 'Baş Danışman'].includes(role)) {
+      ctx.strokeStyle = role === 'Portföy Muhasebecisi' || role === 'Görev Takipçisi' ? '#fbbf24' : role === 'Baş Danışman' ? '#34d399' : '#38bdf8';
       ctx.lineWidth = 2.5;
       ctx.strokeRect(48, 25, 12, 11);
       // Earpiece arm going back to ear
@@ -866,7 +1227,6 @@ export class PixelCharacterGenerator {
           trousersColor: '#1e1b4b',
         };
       case 'Likidite Gözlemcisi':
-      default:
         return {
           skinTone,
           skinShadow,
@@ -879,6 +1239,37 @@ export class PixelCharacterGenerator {
           tieColor: '#06b6d4',
           eyeColor: '#0891b2',
           trousersColor: '#0f172a',
+        };
+      case 'Görev Takipçisi':
+        return {
+          skinTone,
+          skinShadow,
+          hairBase: '#334155',
+          hairDark: '#1e293b',
+          hairLight: '#64748b',
+          jacketBase: '#1e3a8a',
+          jacketDark: '#0f172a',
+          jacketLight: '#38bdf8',
+          tieColor: '#fbbf24',
+          eyeColor: '#0284c7',
+          trousersColor: '#0f172a',
+          goldTrim: true,
+        };
+      case 'Baş Danışman':
+      default:
+        return {
+          skinTone,
+          skinShadow,
+          hairBase: '#0f172a',
+          hairDark: '#020617',
+          hairLight: '#334155',
+          jacketBase: '#065f46',
+          jacketDark: '#064e3b',
+          jacketLight: '#34d399',
+          tieColor: '#10b981',
+          eyeColor: '#10b981',
+          trousersColor: '#022c22',
+          goldTrim: true,
         };
     }
   }

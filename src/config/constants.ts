@@ -18,6 +18,8 @@ export enum AgentRole {
   TECHNICAL_ANALYST = 'Teknik Analist',
   LIQUIDITY_OBSERVER = 'Likidite Gözlemcisi',
   SECRETARY = 'Sekreterya',
+  OPS_ASSISTANT = 'Görev Takipçisi',
+  EXECUTIVE_BRIEFER = 'Baş Danışman',
 }
 
 export enum AgentState {

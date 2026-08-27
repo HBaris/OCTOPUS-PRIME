@@ -6,6 +6,7 @@ import {
   CandlestickData,
   ColorType,
   Time,
+  LineStyle,
   IPriceLine,
 } from 'lightweight-charts';
 import { wsService } from './websocket.ts';
@@ -320,7 +321,7 @@ export class PositionsChartManager {
     // Initial Candle Data Fetch
     this.loadCandles(pos.symbol, series, chart);
 
-    // 3. Draw SL, TP, and Liquidation Reference Lines on Chart
+    // 3. Draw SL (Red), TP (Green), and Liquidation (Orange) Reference Lines on Chart
     const stopLossPrice = pos.stopLoss || (side === 'LONG' ? pos.entryPrice * 0.98 : pos.entryPrice * 1.02);
     const takeProfitPrice = pos.takeProfit || (side === 'LONG' ? pos.entryPrice * 1.04 : pos.entryPrice * 0.96);
 
@@ -329,30 +330,32 @@ export class PositionsChartManager {
     let liquidationLine: IPriceLine | undefined;
 
     try {
+      // 1. Red Dashed Stop-Loss Line
       stopLossLine = series.createPriceLine({
         price: stopLossPrice,
         color: '#ef4444',
         lineWidth: 1,
-        lineStyle: 2, // Dashed
+        lineStyle: LineStyle.Dashed,
         axisLabelVisible: true,
         title: 'SL',
       });
 
+      // 2. Green Dashed Take-Profit Line
       takeProfitLine = series.createPriceLine({
         price: takeProfitPrice,
         color: '#10b981',
         lineWidth: 1,
-        lineStyle: 2, // Dashed
+        lineStyle: LineStyle.Dashed,
         axisLabelVisible: true,
         title: 'TP',
       });
 
-      // Orange Dashed Liquidation Line
+      // 3. Vibrant Orange Dashed Liquidation Line
       liquidationLine = series.createPriceLine({
         price: liqPrice,
         color: '#f97316',
         lineWidth: 1,
-        lineStyle: 2, // Dashed
+        lineStyle: LineStyle.Dashed,
         axisLabelVisible: true,
         title: 'LİKİDASYON',
       });
@@ -450,11 +453,12 @@ export class PositionsChartManager {
     state.pnlEl.className = `card-pnl ${isProfit ? 'positive' : 'negative'}`;
     state.pnlEl.textContent = `${pnlSign}$${pos.unrealizedPnl.toFixed(2)} (${pnlSign}${pnlPercent.toFixed(2)}%)`;
 
+    const side = (pos.side || (pos.amount >= 0 ? 'LONG' : 'SHORT')).toUpperCase();
     const leverage = pos.leverage || 5;
     const marginMode = pos.marginMode || 'isolated';
     state.leverageEl.textContent = `${leverage}x (${marginMode})`;
 
-    const liqPrice = pos.liquidationPrice || (pos.side === 'SHORT' ? pos.entryPrice * (1 + 1 / leverage - 0.005) : pos.entryPrice * (1 - 1 / leverage + 0.005));
+    const liqPrice = pos.liquidationPrice || (side === 'SHORT' ? pos.entryPrice * (1 + 1 / leverage - 0.005) : pos.entryPrice * (1 - 1 / leverage + 0.005));
     state.liquidationEl.textContent = `Liq: $${Math.round(liqPrice).toLocaleString()}`;
 
     const marginText = pos.marginUsed ? ` | Margin: $${pos.marginUsed.toFixed(1)}` : '';
@@ -462,14 +466,46 @@ export class PositionsChartManager {
     state.sourceEl.textContent = `⚡ ${this.formatCategory(pos.sourceCategory)}`;
 
     // Update SL/TP/Liq lines
-    if (pos.stopLoss && state.stopLossLine) {
-      state.stopLossLine.applyOptions({ price: pos.stopLoss });
+    const stopLossPrice = pos.stopLoss || (side === 'LONG' ? pos.entryPrice * 0.98 : pos.entryPrice * 1.02);
+    const takeProfitPrice = pos.takeProfit || (side === 'LONG' ? pos.entryPrice * 1.04 : pos.entryPrice * 0.96);
+
+    if (state.stopLossLine) {
+      state.stopLossLine.applyOptions({ price: stopLossPrice });
+    } else {
+      state.stopLossLine = state.series.createPriceLine({
+        price: stopLossPrice,
+        color: '#ef4444',
+        lineWidth: 1,
+        lineStyle: LineStyle.Dashed,
+        axisLabelVisible: true,
+        title: 'SL',
+      });
     }
-    if (pos.takeProfit && state.takeProfitLine) {
-      state.takeProfitLine.applyOptions({ price: pos.takeProfit });
+
+    if (state.takeProfitLine) {
+      state.takeProfitLine.applyOptions({ price: takeProfitPrice });
+    } else {
+      state.takeProfitLine = state.series.createPriceLine({
+        price: takeProfitPrice,
+        color: '#10b981',
+        lineWidth: 1,
+        lineStyle: LineStyle.Dashed,
+        axisLabelVisible: true,
+        title: 'TP',
+      });
     }
+
     if (state.liquidationLine) {
       state.liquidationLine.applyOptions({ price: liqPrice });
+    } else {
+      state.liquidationLine = state.series.createPriceLine({
+        price: liqPrice,
+        color: '#f97316',
+        lineWidth: 1,
+        lineStyle: LineStyle.Dashed,
+        axisLabelVisible: true,
+        title: 'LİKİDASYON',
+      });
     }
   }
 
@@ -480,12 +516,15 @@ export class PositionsChartManager {
       cardState.resizeObserver.disconnect();
       if (cardState.stopLossLine) {
         cardState.series.removePriceLine(cardState.stopLossLine);
+        cardState.stopLossLine = undefined;
       }
       if (cardState.takeProfitLine) {
         cardState.series.removePriceLine(cardState.takeProfitLine);
+        cardState.takeProfitLine = undefined;
       }
       if (cardState.liquidationLine) {
         cardState.series.removePriceLine(cardState.liquidationLine);
+        cardState.liquidationLine = undefined;
       }
       cardState.chart.remove();
     } catch (e) {

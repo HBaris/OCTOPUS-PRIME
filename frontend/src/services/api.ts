@@ -39,6 +39,19 @@ export const apiService = {
     return null;
   },
 
+  async fetchNews(): Promise<any[]> {
+    try {
+      const response = await fetch(`${APP_CONFIG.REST_API_URL}/news`);
+      if (response.ok) {
+        const data = await response.json();
+        return Array.isArray(data.news) ? data.news : [];
+      }
+    } catch (err) {
+      console.warn('[API] Failed to fetch news:', err);
+    }
+    return [];
+  },
+
   async fetchPortfolio(): Promise<any> {
     try {
       const response = await fetch(`${APP_CONFIG.REST_API_URL}/portfolio`);
@@ -102,6 +115,37 @@ export const apiService = {
     } catch (err: any) {
       console.error('[API] Error placing order:', err);
       return { success: false, message: err.message || 'Network error' };
+    }
+  },
+
+  /**
+   * Fetches personal assistant executive & ops briefing from /api/assistant/briefing
+   */
+  async fetchBriefing(): Promise<any> {
+    try {
+      const response = await fetch(`${APP_CONFIG.REST_API_URL}/assistant/briefing`);
+      if (response.ok) {
+        const data = await response.json();
+        return data.briefing || null;
+      }
+    } catch (err) {
+      console.warn('[API] Failed to fetch assistant briefing:', err);
+    }
+    return null;
+  },
+
+  /**
+   * Marks briefing as read and resets assistant counters
+   */
+  async markBriefingRead(): Promise<boolean> {
+    try {
+      const response = await fetch(`${APP_CONFIG.REST_API_URL}/assistant/mark-read`, {
+        method: 'POST',
+      });
+      return response.ok;
+    } catch (err) {
+      console.warn('[API] Failed to mark briefing read:', err);
+      return false;
     }
   },
 };

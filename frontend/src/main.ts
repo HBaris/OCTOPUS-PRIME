@@ -7,6 +7,7 @@ import { RiskRoomScene } from './scenes/RiskRoomScene.ts';
 import { PortfolioRoomScene } from './scenes/PortfolioRoomScene.ts';
 import { SignalsRoomScene } from './scenes/SignalsRoomScene.ts';
 import { PatronRoomScene } from './scenes/PatronRoomScene.ts';
+import { AssistantRoomScene } from './scenes/AssistantRoomScene.ts';
 import { APP_CONFIG } from './config.ts';
 import './services/positionsChartManager.ts';
 
@@ -38,10 +39,11 @@ const gameConfig: Phaser.Types.Core.GameConfig = {
     PortfolioRoomScene,
     SignalsRoomScene,
     PatronRoomScene,
+    AssistantRoomScene,
   ],
 };
 
 // Initialize Phaser Game instance
 new Phaser.Game(gameConfig);
 
-console.log('👾 Crypto Trading Agent Pixel Art Office Simulation (Lobby + 6 Rooms) initialized.');
+console.log('👾 Crypto Trading Agent Pixel Art Office Simulation (Lobby + 7 Rooms) initialized.');

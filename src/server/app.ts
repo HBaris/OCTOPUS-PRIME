@@ -15,6 +15,8 @@ import { createPortfolioRouter } from './routes/portfolio.route.js';
 import { createNewsRouter } from './routes/news.route.js';
 import { createSignalsRouter } from './routes/signals.route.js';
 import { createFeedbackRouter } from './routes/feedback.route.js';
+import { createAssistantRouter } from './routes/assistant.route.js';
+import { AssistantService } from '../services/assistant/AssistantService.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
 export interface AppDependencies {
@@ -25,6 +27,7 @@ export interface AppDependencies {
   keywordsManager: KeywordsManager;
   decisionEngine: DecisionEngine;
   feedbackSystem: FeedbackSystem;
+  assistantService?: AssistantService;
 }
 
 export function createApp(deps: AppDependencies): Express {
@@ -72,6 +75,8 @@ export function createApp(deps: AppDependencies): Express {
   app.use('/api/news', createNewsRouter(deps.newsRadar, deps.keywordsManager));
   app.use('/api/signals', createSignalsRouter(deps.decisionEngine));
   app.use('/api/feedback', createFeedbackRouter(deps.feedbackSystem));
+  const assistantService = deps.assistantService || new AssistantService();
+  app.use('/api/assistant', createAssistantRouter(assistantService));
 
   // 404 Handler
   app.use((req, res) => {

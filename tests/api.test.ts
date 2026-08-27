@@ -49,16 +49,33 @@ describe('REST API Endpoints', () => {
     expect(res.body.status).toBe('ok');
   });
 
-  it('GET /api/state should return system and 15 agent states', async () => {
+  it('GET /api/state should return system and 17 agent states', async () => {
     const res = await request(app).get('/api/state');
     expect(res.status).toBe(200);
     expect(res.body).toHaveProperty('agents');
     expect(res.body).toHaveProperty('currentSceneSeverity');
     expect(res.body).toHaveProperty('portfolioSummary');
-    expect(Object.keys(res.body.agents).length).toBe(15);
+    expect(Object.keys(res.body.agents).length).toBe(17);
     expect(res.body.agents).toHaveProperty('Patron');
     expect(res.body.agents).toHaveProperty('BTC Analisti');
     expect(res.body.agents).toHaveProperty('Sekreterya');
+    expect(res.body.agents).toHaveProperty('Görev Takipçisi');
+    expect(res.body.agents).toHaveProperty('Baş Danışman');
+  });
+
+  it('GET /api/assistant/briefing should return task and general executive summary', async () => {
+    const res = await request(app).get('/api/assistant/briefing');
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.briefing).toHaveProperty('taskSummary');
+    expect(res.body.briefing).toHaveProperty('executiveSummary');
+  });
+
+  it('POST /api/assistant/mark-read should reset assistant counters', async () => {
+    const res = await request(app).post('/api/assistant/mark-read');
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.message).toContain('okundu');
   });
 
   it('GET /api/portfolio should return balance and positions', async () => {

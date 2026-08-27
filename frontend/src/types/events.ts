@@ -28,7 +28,9 @@ export type AgentRole =
   | 'Düzenleyici İzleyici'
   | 'Teknik Analist'
   | 'Likidite Gözlemcisi'
-  | 'Sekreterya';
+  | 'Sekreterya'
+  | 'Görev Takipçisi'
+  | 'Baş Danışman';
 
 export type AgentState = 'IDLE' | 'ANALYZING' | 'ALERTING' | 'TRADING' | 'SALUTING';
 
@@ -174,4 +176,46 @@ export interface SystemStatusPayload {
     totalUsd: number;
     openPositionsCount: number;
   };
+}
+
+export interface TaskSummaryData {
+  title: string;
+  totalAgentActions: number;
+  activeAgentsCount: number;
+  mostActiveRoom: string;
+  criticalAlertsCount: number;
+  keyOperations: string[];
+  agentBreakdown: Array<{ agent: string; actionCount: number; lastTask: string }>;
+  summaryParagraph: string;
+}
+
+export interface ExecutiveSummaryData {
+  title: string;
+  totalMissedNews: number;
+  categoryBreakdown: Record<string, number>;
+  topHeadlines: Array<{ title: string; category: string; impactScore: number; sentiment: string }>;
+  currentSeverity: string;
+  severityReason: string;
+  portfolioSummary: {
+    currentBalance: number;
+    initialBalance: number;
+    pnlUsd: number;
+    openPositionsCount: number;
+  };
+  captainTakeaway: string;
+  summaryParagraph: string;
+}
+
+export interface BriefingResponsePayload {
+  generatedAt: string;
+  sinceTimestamp: string;
+  unreadCounts: {
+    news: number;
+    agentActions: number;
+    signals: number;
+    orders: number;
+    alerts: number;
+  };
+  taskSummary: TaskSummaryData;
+  executiveSummary: ExecutiveSummaryData;
 }

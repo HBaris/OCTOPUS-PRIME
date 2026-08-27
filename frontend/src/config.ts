@@ -76,6 +76,13 @@ export const ROOMS: RoomConfig[] = [
     icon: '⚡',
     agentRoles: ['Sinyal Avcısı', 'Teknik Analist'],
   },
+  {
+    key: 'AssistantRoomScene',
+    name: 'Asistan Odası',
+    shortName: 'Asistan',
+    icon: '🎖️',
+    agentRoles: ['Görev Takipçisi', 'Baş Danışman'],
+  },
 ];
 
 export const AGENT_CONFIGS: AgentVisualConfig[] = [
@@ -254,6 +261,30 @@ export const AGENT_CONFIGS: AgentVisualConfig[] = [
     hairColor: 0x1e1b4b,
     shirtColor: 0xa5b4fc,
     deskColor: 0x334155,
+  },
+
+  // 7. Asistan Odası (Kişisel Asistan Masası)
+  {
+    role: 'Görev Takipçisi',
+    name: 'Görev Takipçisi (Operasyon)',
+    avatarIcon: '📌',
+    sceneKey: 'AssistantRoomScene',
+    roomTitle: 'Asistan Odası',
+    bodyColor: 0x38bdf8, // Steel Blue / Cyan
+    hairColor: 0x334155,
+    shirtColor: 0x1e3a8a, // Navy tailored vest
+    deskColor: 0x1e293b,
+  },
+  {
+    role: 'Baş Danışman',
+    name: 'Baş Danışman (İstihbarat)',
+    avatarIcon: '🧠',
+    sceneKey: 'AssistantRoomScene',
+    roomTitle: 'Asistan Odası',
+    bodyColor: 0x10b981, // Emerald Smart
+    hairColor: 0x0f172a,
+    shirtColor: 0x064e3b, // Smart blazer
+    deskColor: 0x064e3b,
   },
 ];
 

@@ -8,6 +8,7 @@ import { getExchangeService } from './services/exchange/ExchangeFactory.js';
 import { CorrelationTracker } from './services/correlation/CorrelationTracker.js';
 import { FeedbackSystem } from './services/feedback/FeedbackSystem.js';
 import { DecisionEngine } from './services/decision/DecisionEngine.js';
+import { AssistantService } from './services/assistant/AssistantService.js';
 import { AgentManager } from './agents/AgentManager.js';
 import { createApp } from './server/app.js';
 import { WebSocketServer } from './server/websocket/WebSocketServer.js';
@@ -27,8 +28,9 @@ async function bootstrap() {
   const correlationTracker = new CorrelationTracker(exchangeService, 'correlations.json');
   const feedbackSystem = new FeedbackSystem('feedback.json');
   const decisionEngine = new DecisionEngine(exchangeService, correlationTracker, feedbackSystem);
+  const assistantService = new AssistantService();
 
-  // 3. Initialize 15 Agent Roles
+  // 3. Initialize Agent Roles (including Personal Assistant Team)
   const agentManager = new AgentManager(exchangeService, correlationTracker);
 
   // 4. Create Express HTTP Application
@@ -39,6 +41,7 @@ async function bootstrap() {
     keywordsManager,
     decisionEngine,
     feedbackSystem,
+    assistantService,
   });
 
   const server = http.createServer(app);
