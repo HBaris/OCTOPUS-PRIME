@@ -203,6 +203,77 @@ export class AgentManager {
         details
       );
     });
+
+    // 8. Technical Analyst on TECHNICAL_SIGNAL
+    eventBus.on(EventType.TECHNICAL_SIGNAL, (event) => {
+      const p = event.payload;
+      this.updateAgentState(
+        AgentRole.TECHNICAL_ANALYST,
+        AgentState.ANALYZING,
+        `TA: ${p.symbol} EMA(${p.emaCross}) RSI(${p.rsi14}) Vol(${p.volumeSpikeDetected ? 'SPIKE' : 'NORM'})`
+      );
+      if (this.agents[AgentRole.TECHNICAL_ANALYST]) {
+        this.agents[AgentRole.TECHNICAL_ANALYST].stats.actionsCount++;
+      }
+      this.emitAgentAction(
+        AgentRole.TECHNICAL_ANALYST,
+        'İndikatör Taraması',
+        'COMPLETED',
+        `${p.symbol}: EMA9=${p.ema9}, RSI=${p.rsi14}, Öneri=${p.suggestedAction} (Skor: ${p.confidenceScore})`
+      );
+    });
+
+    // 9. Signal Hunter on SOCIAL_SIGNAL
+    eventBus.on(EventType.SOCIAL_SIGNAL, (event) => {
+      const p = event.payload;
+      this.updateAgentState(
+        AgentRole.SIGNAL_HUNTER,
+        AgentState.ALERTING,
+        `Sosyal Akım: [${p.source.toUpperCase()}] ${p.coin} (${p.sentiment})`
+      );
+      this.emitAgentAction(
+        AgentRole.SIGNAL_HUNTER,
+        'Sosyal İstihbarat',
+        'COMPLETED',
+        `Kanal: ${p.channelOrUser} | Coin: ${p.coin} | Duygu: ${p.sentiment}`
+      );
+    });
+
+    // 10. Circuit Breaker on TRADING_HALTED (Enter Analysis / Cooldown Mode)
+    eventBus.on(EventType.TRADING_HALTED, (event) => {
+      const p = event.payload;
+      logger.warn(`🛑 [AgentManager] All agents entering COOLDOWN / ANALİZ MODU for ${p.durationMinutes} minutes.`);
+
+      Object.keys(this.agents).forEach((roleKey) => {
+        const role = roleKey as AgentRole;
+        this.updateAgentState(role, AgentState.COOLDOWN, `ANALİZ MODU: ${p.reason}`);
+      });
+
+      this.emitAgentAction(
+        AgentRole.RISK_ANALYST,
+        'Devre Kesici Tetiklendi',
+        'COMPLETED',
+        `İşlemler ${p.durationMinutes} dakika durduruldu. Post-Mortem Raporu: ${p.reportId}`
+      );
+    });
+
+    // 11. Circuit Breaker on TRADING_RESUMED (Resume Normal Operations)
+    eventBus.on(EventType.TRADING_RESUMED, (event) => {
+      const p = event.payload;
+      logger.info(`🟢 [AgentManager] Trading resumed. Resetting agent states to IDLE.`);
+
+      Object.keys(this.agents).forEach((roleKey) => {
+        const role = roleKey as AgentRole;
+        this.updateAgentState(role, AgentState.IDLE, 'Piyasa ve sinyal akışları izleniyor.');
+      });
+
+      this.emitAgentAction(
+        AgentRole.PATRON,
+        'İşlemler Yeniden Başlatıldı',
+        'COMPLETED',
+        p.reason
+      );
+    });
   }
 
   public updateAgentState(role: AgentRole, state: AgentState, currentTask: string): void {

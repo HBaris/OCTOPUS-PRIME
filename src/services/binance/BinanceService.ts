@@ -45,9 +45,11 @@ export class BinanceService implements IExchangeService {
             apiKey: config.BINANCE_API_KEY,
             secret: config.BINANCE_API_SECRET,
             enableRateLimit: true,
+            timeout: 30000,
             options: {
-              defaultType: 'future', // Testnet futures or spot
+              defaultType: 'future', // Testnet futures
               adjustForTimeDifference: true,
+              recvWindow: 60000, // 60s tolerance for Windows clock drift
             },
           });
 

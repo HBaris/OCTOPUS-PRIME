@@ -9,9 +9,6 @@ export enum AgentRole {
   PORTFOLIO_ACCOUNTANT = 'Portföy Muhasebecisi',
   SIGNAL_HUNTER = 'Sinyal Avcısı',
   PATRON = 'Patron',
-  BTC_ANALYST = 'BTC Analisti',
-  ETH_ANALYST = 'ETH Analisti',
-  SOL_ANALYST = 'SOL Analisti',
   MACRO_ECONOMIST = 'Makro Ekonomist',
   WHALE_TRACKER = 'Whale Takipçisi',
   REGULATORY_WATCHER = 'Düzenleyici İzleyici',
@@ -27,6 +24,7 @@ export enum AgentState {
   ANALYZING = 'ANALYZING',
   ALERTING = 'ALERTING',
   TRADING = 'TRADING',
+  COOLDOWN = 'COOLDOWN',
   ERROR = 'ERROR',
 }
 
@@ -44,6 +42,24 @@ export enum EventType {
   SPENDING_LIMIT_WARNING = 'SPENDING_LIMIT_WARNING',
   LIQUIDATION_RISK_WARNING = 'LIQUIDATION_RISK_WARNING',
   SYSTEM_STATUS = 'SYSTEM_STATUS',
+  TECHNICAL_SIGNAL = 'TECHNICAL_SIGNAL',
+  SOCIAL_SIGNAL = 'SOCIAL_SIGNAL',
+  LEARNING_RULE_UPDATED = 'LEARNING_RULE_UPDATED',
+  TRADING_HALTED = 'TRADING_HALTED',
+  TRADING_RESUMED = 'TRADING_RESUMED',
+  COOLDOWN_REPORT_READY = 'COOLDOWN_REPORT_READY',
+}
+
+export enum MarketRegime {
+  BULL = 'BULL',
+  BEAR = 'BEAR',
+  SIDEWAYS = 'SIDEWAYS',
+}
+
+export enum RuleTier {
+  HYPOTHESIS = 'HYPOTHESIS',
+  WEAK_RULE = 'WEAK_RULE',
+  STRONG_RULE = 'STRONG_RULE',
 }
 
 export enum SceneSeverity {

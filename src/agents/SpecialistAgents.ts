@@ -11,33 +11,6 @@ import {
 
 export function createSpecialistAgentInfos(): Partial<Record<AgentRole, AgentInfo>> {
   return {
-    [AgentRole.BTC_ANALYST]: {
-      role: AgentRole.BTC_ANALYST,
-      name: 'BTC Analisti',
-      avatarIcon: '₿',
-      state: AgentState.IDLE,
-      currentTask: 'Bitcoin zincir üstü ve piyasa haberleri izleniyor',
-      lastActive: new Date().toISOString(),
-      stats: { actionsCount: 0, customMetric: '0 BTC analizi' },
-    },
-    [AgentRole.ETH_ANALYST]: {
-      role: AgentRole.ETH_ANALYST,
-      name: 'ETH Analisti',
-      avatarIcon: 'Ξ',
-      state: AgentState.IDLE,
-      currentTask: 'Ethereum ekosistemi ve L2 hareketleri taranıyor',
-      lastActive: new Date().toISOString(),
-      stats: { actionsCount: 0, customMetric: '0 ETH analizi' },
-    },
-    [AgentRole.SOL_ANALYST]: {
-      role: AgentRole.SOL_ANALYST,
-      name: 'SOL Analisti',
-      avatarIcon: '◎',
-      state: AgentState.IDLE,
-      currentTask: 'Solana ağ aktivitesi ve DeFi hacmi takip ediliyor',
-      lastActive: new Date().toISOString(),
-      stats: { actionsCount: 0, customMetric: '0 SOL analizi' },
-    },
     [AgentRole.MACRO_ECONOMIST]: {
       role: AgentRole.MACRO_ECONOMIST,
       name: 'Makro Ekonomist',
@@ -143,7 +116,7 @@ export class SpecialistAgentsManager {
   }
 
   private initEventListeners(): void {
-    // 1. News Stream -> BTC, ETH, SOL, Macro, Regulatory, Whale, Secretary
+    // 1. News Stream -> Macro, Regulatory, Whale, Secretary
     eventBus.on(EventType.NEW_NEWS, (event) => {
       const p = event.payload as NewNewsPayload;
       this.totalEventsProcessed++;
@@ -152,35 +125,14 @@ export class SpecialistAgentsManager {
       const matched = p.matchedCoins || [];
       const impact = p.impact?.impactScore || 5;
 
-      // 1. BTC Analisti
-      if (matched.includes('BTC')) {
-        const details = `BTC haberi: ${impact}/10 etki (${p.title.slice(0, 35)}...)`;
-        this.updateAgentStateFn(AgentRole.BTC_ANALYST, AgentState.ALERTING, details);
-        this.emitAgentActionFn(AgentRole.BTC_ANALYST, 'BTC Analizi', 'COMPLETED', details);
-      }
-
-      // 2. ETH Analisti
-      if (matched.includes('ETH')) {
-        const details = `ETH haberi: ${impact}/10 etki (${p.title.slice(0, 35)}...)`;
-        this.updateAgentStateFn(AgentRole.ETH_ANALYST, AgentState.ALERTING, details);
-        this.emitAgentActionFn(AgentRole.ETH_ANALYST, 'ETH Analizi', 'COMPLETED', details);
-      }
-
-      // 3. SOL Analisti
-      if (matched.includes('SOL')) {
-        const details = `SOL haberi: ${impact}/10 etki (${p.title.slice(0, 35)}...)`;
-        this.updateAgentStateFn(AgentRole.SOL_ANALYST, AgentState.ALERTING, details);
-        this.emitAgentActionFn(AgentRole.SOL_ANALYST, 'SOL Analizi', 'COMPLETED', details);
-      }
-
-      // 4. Makro Ekonomist
+      // 1. Makro Ekonomist
       if (['defcon_2', 'defcon_1', 'geopolitical', 'macro_economic'].includes(p.category)) {
         const details = `Makro gelişme: ${p.title.slice(0, 38)}... (Etki: ${impact}/10)`;
         this.updateAgentStateFn(AgentRole.MACRO_ECONOMIST, AgentState.ANALYZING, details);
         this.emitAgentActionFn(AgentRole.MACRO_ECONOMIST, 'Makroekonomik Analiz', 'COMPLETED', details);
       }
 
-      // 5. Whale Takipçisi (impact >= 7)
+      // 2. Whale Takipçisi (impact >= 7)
       if (impact >= 7) {
         const symbol = matched[0] || 'Kripto Piyasası';
         const details = `Büyük hareket tespit edildi: ${symbol} (Etki: ${impact}/10)`;
@@ -188,7 +140,7 @@ export class SpecialistAgentsManager {
         this.emitAgentActionFn(AgentRole.WHALE_TRACKER, 'Balina Tespiti', 'COMPLETED', details);
       }
 
-      // 6. Düzenleyici İzleyici
+      // 3. Düzenleyici İzleyici
       const regRegex = /(sec|yasak|regülasyon|regulation|license|lisans|binance|dava|mahkeme|fed|hazine)/i;
       if (p.category === 'crypto_specific' && regRegex.test(p.title)) {
         const details = `Regülasyon takibi: ${p.title.slice(0, 38)}...`;

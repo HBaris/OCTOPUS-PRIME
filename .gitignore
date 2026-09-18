@@ -17,6 +17,9 @@ coverage/
 # Data & Persistence (auto-generated)
 correlations.json
 feedback.json
+rules.json
+test_*.json
+tests/test_*.json
 logs/
 *.log
 

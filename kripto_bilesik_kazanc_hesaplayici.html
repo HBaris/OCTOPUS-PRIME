@@ -1,0 +1,1294 @@
+<!DOCTYPE html>
+<html lang="tr" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kripto Bileşik Kazanç & Hizmet Komisyonu Simülatörü</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Google Fonts: Inter & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            crypto: {
+              950: '#07090e',
+              900: '#0b101b',
+              850: '#101726',
+              800: '#162035',
+              700: '#202f4e',
+              accent: '#10b981',
+              gold: '#f59e0b',
+              cyan: '#06b6d4',
+              purple: '#8b5cf6'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      background-color: #07090e;
+      color: #f1f5f9;
+      font-family: 'Inter', sans-serif;
+    }
+    .mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .glass-card {
+      background: rgba(16, 23, 38, 0.75);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+    }
+    .glass-card-hover {
+      transition: all 0.2s ease;
+    }
+    .glass-card-hover:hover {
+      border-color: rgba(16, 185, 129, 0.3);
+      transform: translateY(-2px);
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 0 15px rgba(16, 185, 129, 0.1);
+    }
+    .glow-green {
+      box-shadow: 0 0 20px -3px rgba(16, 185, 129, 0.25);
+    }
+    .glow-gold {
+      box-shadow: 0 0 20px -3px rgba(245, 158, 11, 0.25);
+    }
+    /* Custom scrollbars */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0b101b;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #202f4e;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #334155;
+    }
+    /* Range input styling */
+    input[type=range] {
+      accent-color: #10b981;
+    }
+    /* Hide spin buttons / arrows on all number inputs */
+    input[type=number]::-webkit-inner-spin-button, 
+    input[type=number]::-webkit-outer-spin-button { 
+      -webkit-appearance: none !important; 
+      margin: 0 !important; 
+    }
+    input[type=number] {
+      -moz-appearance: textfield !important;
+      appearance: textfield !important;
+    }
+    /* Highlight row animation */
+    @keyframes pulse-highlight {
+      0% { background-color: rgba(16, 185, 129, 0.35); }
+      50% { background-color: rgba(16, 185, 129, 0.15); }
+      100% { background-color: rgba(16, 185, 129, 0.05); }
+    }
+    .row-highlight {
+      animation: pulse-highlight 2.5s ease-out forwards;
+    }
+  </style>
+</head>
+<body class="min-h-screen antialiased selection:bg-emerald-500 selection:text-black">
+
+  <!-- Top Navigation & Branding -->
+  <header class="border-b border-slate-800/80 bg-crypto-900/80 backdrop-blur-md sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 via-teal-500 to-cyan-500 flex items-center justify-center text-black font-black text-xl shadow-lg shadow-emerald-500/20">
+          ⚡
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="font-bold text-lg tracking-tight text-white flex items-center gap-2">
+              Kripto Bileşik Getiri & Komisyon Simülatörü
+            </h1>
+            <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+              v2.4
+            </span>
+          </div>
+          <p class="text-xs text-slate-400 hidden sm:block">365 Günlük Bileşik Büyüme & Dış Hizmet Başarı Primi Modeli</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2.5">
+        <button id="copy-proposal-btn" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-crypto-800 hover:bg-crypto-700 text-slate-200 border border-slate-700 transition">
+          <i data-lucide="clipboard-copy" class="w-4 h-4 text-emerald-400"></i>
+          <span>Teklif Metnini Kopyala</span>
+        </button>
+        <button id="export-csv-btn" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-600/20 transition">
+          <i data-lucide="download" class="w-4 h-4"></i>
+          <span>Excel / CSV</span>
+        </button>
+        <button onclick="window.print()" class="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-crypto-800 hover:bg-crypto-700 text-slate-200 border border-slate-700 transition">
+          <i data-lucide="printer" class="w-4 h-4 text-slate-400"></i>
+          <span>Yazdır</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+
+    <!-- 1. Interactive Control Panel -->
+    <section class="glass-card rounded-2xl p-6 shadow-xl border border-slate-800 relative overflow-hidden">
+      <div class="absolute -right-20 -top-20 w-60 h-60 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none"></div>
+      <div class="absolute -left-20 -bottom-20 w-60 h-60 bg-amber-500/5 rounded-full blur-3xl pointer-events-none"></div>
+
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 mb-6 border-b border-slate-800/80">
+        <div>
+          <h2 class="text-lg font-bold text-white flex items-center gap-2">
+            <i data-lucide="sliders" class="w-5 h-5 text-emerald-400"></i>
+            Yatırım & Hizmet Parametreleri
+          </h2>
+          <p class="text-xs text-slate-400 mt-1">Ana paranızı, günlük hedef kazanç yüzdesini ve dışarı hizmet bedeli (komisyon) oranını belirleyin.</p>
+        </div>
+        
+        <!-- Currency & Model Switch -->
+        <div class="flex flex-wrap items-center gap-3">
+          <div class="flex items-center bg-crypto-900 p-1 rounded-xl border border-slate-800 text-xs">
+            <span class="px-2 text-slate-400">Birim:</span>
+            <button class="currency-pill px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-400 font-semibold transition" data-currency="USD">USD ($)</button>
+            <button class="currency-pill px-2.5 py-1 rounded-lg text-slate-400 hover:text-white transition" data-currency="TRY">TRY (₺)</button>
+            <button class="currency-pill px-2.5 py-1 rounded-lg text-slate-400 hover:text-white transition" data-currency="EUR">EUR (€)</button>
+          </div>
+
+          <div class="flex items-center bg-crypto-900 p-1 rounded-xl border border-slate-800 text-xs">
+            <span class="px-2 text-slate-400">Komisyon Modu:</span>
+            <button id="mode-daily" class="px-2.5 py-1 rounded-lg bg-amber-500/20 text-amber-300 font-semibold border border-amber-500/30 transition" title="Günlük kârdan komisyon nakit tahsil edilir, kalan kâr ana paraya eklenip bileşik büyür">
+              Günlük Kesinti (Nakit Çekim)
+            </button>
+            <button id="mode-gross" class="px-2.5 py-1 rounded-lg text-slate-400 hover:text-white transition" title="Komisyonsuz brüt büyüme (karşılaştırma için)">
+              Komisyonsuz (Brüt)
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Grid of Inputs -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        
+        <!-- 1. Initial Capital -->
+        <div class="space-y-3 bg-crypto-900/60 p-4 rounded-xl border border-slate-800/80">
+          <div class="flex items-center justify-between gap-2">
+            <label for="initial-capital" class="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+              <i data-lucide="wallet" class="w-4 h-4 text-emerald-400"></i>
+              Ana Para (Yatırım)
+            </label>
+            <span class="text-xs font-mono text-emerald-400 font-bold px-2 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/25" id="capital-display">$1,000</span>
+          </div>
+
+          <div class="relative">
+            <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-mono font-bold currency-symbol text-sm select-none">$</span>
+            <input type="number" id="initial-capital" value="1000" min="10" max="10000000" step="50"
+              class="w-full bg-crypto-850 border border-slate-700 rounded-lg py-2 pl-9 pr-3 text-white font-mono font-bold focus:outline-none focus:border-emerald-500 text-base" />
+          </div>
+
+          <!-- Quick Capital Pills -->
+          <div class="flex flex-wrap gap-1.5 pt-1">
+            <button type="button" class="capital-btn px-2 py-1 text-xs rounded bg-crypto-800 hover:bg-slate-700 text-slate-300 font-mono" data-val="500">500</button>
+            <button type="button" class="capital-btn px-2 py-1 text-xs rounded bg-emerald-500/20 text-emerald-300 font-mono font-bold border border-emerald-500/30" data-val="1000">1.000</button>
+            <button type="button" class="capital-btn px-2 py-1 text-xs rounded bg-crypto-800 hover:bg-slate-700 text-slate-300 font-mono" data-val="2500">2.500</button>
+            <button type="button" class="capital-btn px-2 py-1 text-xs rounded bg-crypto-800 hover:bg-slate-700 text-slate-300 font-mono" data-val="5000">5.000</button>
+            <button type="button" class="capital-btn px-2 py-1 text-xs rounded bg-crypto-800 hover:bg-slate-700 text-slate-300 font-mono" data-val="10000">10.000</button>
+          </div>
+        </div>
+
+        <!-- 2. Daily Profit % -->
+        <div class="space-y-3 bg-crypto-900/60 p-4 rounded-xl border border-slate-800/80">
+          <div class="flex items-center justify-between gap-2">
+            <label for="daily-roi" class="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+              <i data-lucide="trending-up" class="w-4 h-4 text-cyan-400"></i>
+              Günlük Kazanç Oranı
+            </label>
+            <span class="text-xs font-mono text-cyan-400 font-bold px-2 py-0.5 rounded bg-cyan-500/15 border border-cyan-500/25" id="daily-roi-display">%3.00</span>
+          </div>
+
+          <div class="flex items-center gap-3">
+            <input type="range" id="daily-roi-slider" min="0.5" max="10.0" step="0.1" value="3.0"
+              class="w-full h-2 bg-crypto-800 rounded-lg cursor-pointer accent-cyan-400 min-w-0" />
+            <div class="w-28 sm:w-32 flex-shrink-0 flex items-center bg-crypto-850 border border-slate-700 rounded-lg px-2.5 py-1.5 focus-within:border-cyan-400 focus-within:ring-1 focus-within:ring-cyan-400/30 transition shadow-inner">
+              <input type="number" id="daily-roi" value="3.0" min="0.1" max="50.0" step="0.1"
+                class="w-full bg-transparent text-white font-mono font-bold text-sm text-right focus:outline-none pr-1.5" />
+              <span class="text-cyan-400 font-mono text-xs font-bold select-none shrink-0">%</span>
+            </div>
+          </div>
+
+          <!-- Quick ROI Pills -->
+          <div class="flex flex-wrap gap-1.5 pt-1">
+            <button type="button" class="roi-btn px-2 py-1 text-xs rounded bg-crypto-800 hover:bg-slate-700 text-slate-300 font-mono" data-val="1.5">%1.5</button>
+            <button type="button" class="roi-btn px-2 py-1 text-xs rounded bg-crypto-800 hover:bg-slate-700 text-slate-300 font-mono" data-val="2.0">%2.0</button>
+            <button type="button" class="roi-btn px-2 py-1 text-xs rounded bg-cyan-500/20 text-cyan-300 font-mono font-bold border border-cyan-500/30" data-val="3.0">%3.0</button>
+            <button type="button" class="roi-btn px-2 py-1 text-xs rounded bg-crypto-800 hover:bg-slate-700 text-slate-300 font-mono" data-val="4.0">%4.0</button>
+            <button type="button" class="roi-btn px-2 py-1 text-xs rounded bg-crypto-800 hover:bg-slate-700 text-slate-300 font-mono" data-val="5.0">%5.0</button>
+          </div>
+        </div>
+
+        <!-- 3. Commission Rate % -->
+        <div class="space-y-3 bg-crypto-900/60 p-4 rounded-xl border border-slate-800/80">
+          <div class="flex items-center justify-between gap-2">
+            <label for="commission-rate" class="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+              <i data-lucide="percent" class="w-4 h-4 text-amber-400"></i>
+              Hizmet Komisyonu
+            </label>
+            <span class="text-xs font-mono text-amber-400 font-bold px-2 py-0.5 rounded bg-amber-500/15 border border-amber-500/25" id="commission-display">%20.00</span>
+          </div>
+
+          <div class="flex items-center gap-3">
+            <input type="range" id="commission-slider" min="0" max="50" step="1" value="20"
+              class="w-full h-2 bg-crypto-800 rounded-lg cursor-pointer accent-amber-400 min-w-0" />
+            <div class="w-28 sm:w-32 flex-shrink-0 flex items-center bg-crypto-850 border border-slate-700 rounded-lg px-2.5 py-1.5 focus-within:border-amber-400 focus-within:ring-1 focus-within:ring-amber-400/30 transition shadow-inner">
+              <input type="number" id="commission-rate" value="20" min="0" max="90" step="1"
+                class="w-full bg-transparent text-white font-mono font-bold text-sm text-right focus:outline-none pr-1.5" />
+              <span class="text-amber-400 font-mono text-xs font-bold select-none shrink-0">%</span>
+            </div>
+          </div>
+
+          <!-- Quick Commission Pills -->
+          <div class="flex flex-wrap gap-1.5 pt-1">
+            <button type="button" class="comm-btn px-2 py-1 text-xs rounded bg-crypto-800 hover:bg-slate-700 text-slate-300 font-mono" data-val="0">%0</button>
+            <button type="button" class="comm-btn px-2 py-1 text-xs rounded bg-crypto-800 hover:bg-slate-700 text-slate-300 font-mono" data-val="10">%10</button>
+            <button type="button" class="comm-btn px-2 py-1 text-xs rounded bg-crypto-800 hover:bg-slate-700 text-slate-300 font-mono" data-val="15">%15</button>
+            <button type="button" class="comm-btn px-2 py-1 text-xs rounded bg-amber-500/20 text-amber-300 font-mono font-bold border border-amber-500/30" data-val="20">%20</button>
+            <button type="button" class="comm-btn px-2 py-1 text-xs rounded bg-crypto-800 hover:bg-slate-700 text-slate-300 font-mono" data-val="25">%25</button>
+            <button type="button" class="comm-btn px-2 py-1 text-xs rounded bg-crypto-800 hover:bg-slate-700 text-slate-300 font-mono" data-val="30">%30</button>
+          </div>
+        </div>
+
+        <!-- 4. Duration (Days) -->
+        <div class="space-y-3 bg-crypto-900/60 p-4 rounded-xl border border-slate-800/80">
+          <div class="flex items-center justify-between gap-2">
+            <label for="total-days" class="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+              <i data-lucide="calendar" class="w-4 h-4 text-purple-400"></i>
+              Simülasyon Süresi
+            </label>
+            <span class="text-xs font-mono text-purple-400 font-bold px-2 py-0.5 rounded bg-purple-500/15 border border-purple-500/25" id="days-display">365 Gün</span>
+          </div>
+
+          <div class="flex items-center gap-3">
+            <input type="range" id="days-slider" min="15" max="365" step="5" value="365"
+              class="w-full h-2 bg-crypto-800 rounded-lg cursor-pointer accent-purple-400 min-w-0" />
+            <div class="w-28 sm:w-32 flex-shrink-0 flex items-center bg-crypto-850 border border-slate-700 rounded-lg px-2.5 py-1.5 focus-within:border-purple-400 focus-within:ring-1 focus-within:ring-purple-400/30 transition shadow-inner">
+              <input type="number" id="total-days" value="365" min="1" max="730" step="1"
+                class="w-full bg-transparent text-white font-mono font-bold text-sm text-right focus:outline-none pr-1.5" />
+              <span class="text-purple-400 font-mono text-xs font-bold select-none shrink-0">Gün</span>
+            </div>
+          </div>
+
+          <!-- Quick Days Pills -->
+          <div class="flex flex-wrap gap-1.5 pt-1">
+            <button type="button" class="days-btn px-2 py-1 text-xs rounded bg-crypto-800 hover:bg-slate-700 text-slate-300 font-mono" data-val="24">24 G</button>
+            <button type="button" class="days-btn px-2 py-1 text-xs rounded bg-crypto-800 hover:bg-slate-700 text-slate-300 font-mono" data-val="60">60 G (2 Ay)</button>
+            <button type="button" class="days-btn px-2 py-1 text-xs rounded bg-crypto-800 hover:bg-slate-700 text-slate-300 font-mono" data-val="90">90 G</button>
+            <button type="button" class="days-btn px-2 py-1 text-xs rounded bg-purple-500/20 text-purple-300 font-mono font-bold border border-purple-500/30" data-val="365">365 G</button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Formula & Effective Daily Rate Banner -->
+      <div class="mt-6 p-4 rounded-xl bg-crypto-950/80 border border-slate-800 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 text-xs">
+        <div class="flex items-center gap-3">
+          <div class="p-2 rounded-lg bg-emerald-500/10 text-emerald-400">
+            <i data-lucide="info" class="w-4 h-4"></i>
+          </div>
+          <div>
+            <span class="text-slate-300 font-medium">Bileşik Büyüme Mantığı:</span>
+            <span class="text-slate-400 ml-1">
+              Brüt Günlük <span id="formula-gross-rate" class="text-cyan-400 font-mono font-bold">%3.00</span>
+              kazançtan, <span id="formula-comm-rate" class="text-amber-400 font-mono font-bold">%20.00</span> komisyon kesilir.
+              Müşteri kasasına günlük net <span id="formula-net-rate" class="text-emerald-400 font-mono font-bold">%2.40</span> eklenir.
+            </span>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-4 text-slate-400 font-mono">
+          <div>Günlük Komisyon: <span id="formula-eff-comm" class="text-amber-400 font-bold">%0.60</span> / gün</div>
+          <div class="w-px h-4 bg-slate-700"></div>
+          <div>Müşteri Net Oran: <span id="formula-eff-net" class="text-emerald-400 font-bold">%2.40</span> / gün</div>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- 2. High-Priority Question Milestones: 24. Gün & 2. Ay (60 Gün) & Yıl Sonu -->
+    <section class="space-y-4">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <span class="flex h-2.5 w-2.5 rounded-full bg-emerald-400 animate-ping"></span>
+          <h2 class="text-lg font-bold text-white tracking-tight">Kritik Dönüm Noktaları & Soru Cevapları</h2>
+        </div>
+        <span class="text-xs text-slate-400">Kartlara tıklayarak tablodaki ilgili güne anında atlayabilirsiniz</span>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+        
+        <!-- CARD 1: 24 Gün Sonra (Kullanıcı Talebi) -->
+        <div onclick="jumpToDay(24)" class="cursor-pointer glass-card glass-card-hover rounded-2xl p-5 border border-cyan-500/30 relative overflow-hidden group">
+          <div class="absolute top-0 right-0 w-28 h-28 bg-cyan-500/10 rounded-full blur-2xl group-hover:bg-cyan-500/20 transition"></div>
+          <div class="flex items-center justify-between mb-3">
+            <span class="px-2.5 py-1 text-xs font-bold rounded-lg bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 flex items-center gap-1.5">
+              <i data-lucide="zap" class="w-3.5 h-3.5"></i>
+              24 GÜN SONRA
+            </span>
+            <span class="text-xs text-slate-400 font-mono flex items-center gap-1 group-hover:text-cyan-300">
+              Detayı Gör <i data-lucide="arrow-up-right" class="w-3.5 h-3.5"></i>
+            </span>
+          </div>
+
+          <div class="space-y-3">
+            <div>
+              <p class="text-xs text-slate-400">Müşterinin Ulaştığı Kasa</p>
+              <p class="text-2xl font-black font-mono text-white" id="m-24-balance">$1,763.55</p>
+              <p class="text-xs text-emerald-400 font-mono mt-0.5" id="m-24-profit">+76.3% Net Kâr</p>
+            </div>
+
+            <div class="pt-3 border-t border-slate-800/80 grid grid-cols-2 gap-2 text-xs">
+              <div class="bg-crypto-900/80 p-2 rounded-lg border border-slate-800">
+                <span class="text-slate-400 block text-[11px]">Sana Ödenen Komisyon</span>
+                <span class="text-amber-400 font-mono font-bold text-sm" id="m-24-comm">$190.89</span>
+              </div>
+              <div class="bg-crypto-900/80 p-2 rounded-lg border border-slate-800">
+                <span class="text-slate-400 block text-[11px]">24. Günlük Net Kâr</span>
+                <span class="text-cyan-400 font-mono font-bold text-sm" id="m-24-daily">$41.34</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- CARD 2: 2 Ay / 60 Gün Sonra (Kullanıcı Talebi) -->
+        <div onclick="jumpToDay(60)" class="cursor-pointer glass-card glass-card-hover rounded-2xl p-5 border border-emerald-500/30 relative overflow-hidden group">
+          <div class="absolute top-0 right-0 w-28 h-28 bg-emerald-500/10 rounded-full blur-2xl group-hover:bg-emerald-500/20 transition"></div>
+          <div class="flex items-center justify-between mb-3">
+            <span class="px-2.5 py-1 text-xs font-bold rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1.5">
+              <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+              2 AY SONRA (60 GÜN)
+            </span>
+            <span class="text-xs text-slate-400 font-mono flex items-center gap-1 group-hover:text-emerald-300">
+              Detayı Gör <i data-lucide="arrow-up-right" class="w-3.5 h-3.5"></i>
+            </span>
+          </div>
+
+          <div class="space-y-3">
+            <div>
+              <p class="text-xs text-slate-400">Müşterinin Ulaştığı Kasa</p>
+              <p class="text-2xl font-black font-mono text-white" id="m-60-balance">$4,164.97</p>
+              <p class="text-xs text-emerald-400 font-mono mt-0.5" id="m-60-profit">+316.5% Net Kâr (4.1x Kat)</p>
+            </div>
+
+            <div class="pt-3 border-t border-slate-800/80 grid grid-cols-2 gap-2 text-xs">
+              <div class="bg-crypto-900/80 p-2 rounded-lg border border-slate-800">
+                <span class="text-slate-400 block text-[11px]">Sana Ödenen Komisyon</span>
+                <span class="text-amber-400 font-mono font-bold text-sm" id="m-60-comm">$791.24</span>
+              </div>
+              <div class="bg-crypto-900/80 p-2 rounded-lg border border-slate-800">
+                <span class="text-slate-400 block text-[11px]">60. Günlük Net Kâr</span>
+                <span class="text-emerald-400 font-mono font-bold text-sm" id="m-60-daily">$97.62</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- CARD 3: 1 Yıl / 365 Gün Sonra (Bileşik Güç) -->
+        <div onclick="jumpToDay(365)" class="cursor-pointer glass-card glass-card-hover rounded-2xl p-5 border border-purple-500/30 relative overflow-hidden group">
+          <div class="absolute top-0 right-0 w-28 h-28 bg-purple-500/10 rounded-full blur-2xl group-hover:bg-purple-500/20 transition"></div>
+          <div class="flex items-center justify-between mb-3">
+            <span class="px-2.5 py-1 text-xs font-bold rounded-lg bg-purple-500/20 text-purple-300 border border-purple-500/30 flex items-center gap-1.5">
+              <i data-lucide="crown" class="w-3.5 h-3.5"></i>
+              1 YIL SONRA (365 GÜN)
+            </span>
+            <span class="text-xs text-slate-400 font-mono flex items-center gap-1 group-hover:text-purple-300">
+              Detayı Gör <i data-lucide="arrow-up-right" class="w-3.5 h-3.5"></i>
+            </span>
+          </div>
+
+          <div class="space-y-3">
+            <div>
+              <p class="text-xs text-slate-400">Müşterinin Ulaştığı Kasa</p>
+              <p class="text-2xl font-black font-mono text-white" id="m-365-balance">$6,051,870.45</p>
+              <p class="text-xs text-purple-400 font-mono mt-0.5" id="m-365-profit">+605,087% (6,051x Kat)</p>
+            </div>
+
+            <div class="pt-3 border-t border-slate-800/80 grid grid-cols-2 gap-2 text-xs">
+              <div class="bg-crypto-900/80 p-2 rounded-lg border border-slate-800">
+                <span class="text-slate-400 block text-[11px]">Sana Ödenen Komisyon</span>
+                <span class="text-amber-400 font-mono font-bold text-sm" id="m-365-comm">$1,512,717.61</span>
+              </div>
+              <div class="bg-crypto-900/80 p-2 rounded-lg border border-slate-800">
+                <span class="text-slate-400 block text-[11px]">365. Gün Net Kâr</span>
+                <span class="text-purple-400 font-mono font-bold text-sm" id="m-365-daily">$141,840.83</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Additional Milestones Row -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3 pt-2">
+        <!-- 7 Gün -->
+        <div onclick="jumpToDay(7)" class="cursor-pointer glass-card hover:border-slate-600 p-3 rounded-xl text-center transition">
+          <span class="text-[11px] font-bold text-slate-400 block">7 Gün (1 Hafta)</span>
+          <span class="font-mono font-bold text-sm text-white" id="m-7-balance">$1,180.99</span>
+          <span class="text-[10px] font-mono text-amber-400 block mt-0.5" id="m-7-comm">Kom: $45.25</span>
+        </div>
+        <!-- 14 Gün -->
+        <div onclick="jumpToDay(14)" class="cursor-pointer glass-card hover:border-slate-600 p-3 rounded-xl text-center transition">
+          <span class="text-[11px] font-bold text-slate-400 block">14 Gün (2 Hafta)</span>
+          <span class="font-mono font-bold text-sm text-white" id="m-14-balance">$1,394.74</span>
+          <span class="text-[10px] font-mono text-amber-400 block mt-0.5" id="m-14-comm">Kom: $98.69</span>
+        </div>
+        <!-- 30 Gün -->
+        <div onclick="jumpToDay(30)" class="cursor-pointer glass-card hover:border-slate-600 p-3 rounded-xl text-center transition">
+          <span class="text-[11px] font-bold text-slate-400 block">30 Gün (1 Ay)</span>
+          <span class="font-mono font-bold text-sm text-white" id="m-30-balance">$2,036.94</span>
+          <span class="text-[10px] font-mono text-amber-400 block mt-0.5" id="m-30-comm">Kom: $259.24</span>
+        </div>
+        <!-- 90 Gün -->
+        <div onclick="jumpToDay(90)" class="cursor-pointer glass-card hover:border-slate-600 p-3 rounded-xl text-center transition">
+          <span class="text-[11px] font-bold text-slate-400 block">90 Gün (3 Ay)</span>
+          <span class="font-mono font-bold text-sm text-white" id="m-90-balance">$8,521.84</span>
+          <span class="text-[10px] font-mono text-amber-400 block mt-0.5" id="m-90-comm">Kom: $1,880.46</span>
+        </div>
+        <!-- 120 Gün -->
+        <div onclick="jumpToDay(120)" class="cursor-pointer glass-card hover:border-slate-600 p-3 rounded-xl text-center transition">
+          <span class="text-[11px] font-bold text-slate-400 block">120 Gün (4 Ay)</span>
+          <span class="font-mono font-bold text-sm text-white" id="m-120-balance">$17,435.53</span>
+          <span class="text-[10px] font-mono text-amber-400 block mt-0.5" id="m-120-comm">Kom: $4,108.88</span>
+        </div>
+        <!-- 180 Gün -->
+        <div onclick="jumpToDay(180)" class="cursor-pointer glass-card hover:border-slate-600 p-3 rounded-xl text-center transition">
+          <span class="text-[11px] font-bold text-slate-400 block">180 Gün (6 Ay)</span>
+          <span class="font-mono font-bold text-sm text-white" id="m-180-balance">$72,698.81</span>
+          <span class="text-[10px] font-mono text-amber-400 block mt-0.5" id="m-180-comm">Kom: $17,924.70</span>
+        </div>
+        <!-- 270 Gün -->
+        <div onclick="jumpToDay(270)" class="cursor-pointer glass-card hover:border-slate-600 p-3 rounded-xl text-center transition">
+          <span class="text-[11px] font-bold text-slate-400 block">270 Gün (9 Ay)</span>
+          <span class="font-mono font-bold text-sm text-white" id="m-270-balance">$620,019.22</span>
+          <span class="text-[10px] font-mono text-amber-400 block mt-0.5" id="m-270-comm">Kom: $154,754.81</span>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- 3. Dynamic Charts Section -->
+    <section class="glass-card rounded-2xl p-6 border border-slate-800 space-y-4">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 class="text-lg font-bold text-white flex items-center gap-2">
+            <i data-lucide="line-chart" class="w-5 h-5 text-emerald-400"></i>
+            Portföy Büyüme Eğrisi & Komisyon Akışı
+          </h2>
+          <p class="text-xs text-slate-400">Bileşik büyümenin müşteri portföyü ve hizmet veren komisyonuna etkisi</p>
+        </div>
+
+        <!-- Scale Toggle -->
+        <div class="flex items-center bg-crypto-900 p-1 rounded-xl border border-slate-800 text-xs">
+          <span class="px-2 text-slate-400">Ölçek:</span>
+          <button id="scale-log" class="px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-400 font-semibold transition" title="Logaritmik ölçek ilk aylardaki detayları net görmenizi sağlar">Logaritmik</button>
+          <button id="scale-linear" class="px-2.5 py-1 rounded-lg text-slate-400 hover:text-white transition" title="Lineer ölçek son aylardaki üssel patlamayı gösterir">Lineer</button>
+        </div>
+      </div>
+
+      <!-- Chart Container -->
+      <div class="h-80 w-full relative">
+        <canvas id="growthChart"></canvas>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 text-xs">
+        <div class="flex items-center gap-2">
+          <span class="w-3 h-3 rounded-full bg-emerald-500"></span>
+          <span class="text-slate-300">Müşteri Net Kasası</span>
+          <span class="text-slate-500">(Bileşik artan ana para)</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="w-3 h-3 rounded-full bg-amber-400"></span>
+          <span class="text-slate-300">Sana Ödenen Kümülatif Komisyon</span>
+          <span class="text-slate-500">(Senin toplam gelirin)</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="w-3 h-3 rounded-full bg-cyan-400"></span>
+          <span class="text-slate-300">Günlük Komisyon Kazancın</span>
+          <span class="text-slate-500">(O gün cebine giren)</span>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- 4. Client Proposal / Pitch Summary Box -->
+    <section class="glass-card rounded-2xl p-6 border border-slate-800 space-y-4 relative">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <div class="p-2 rounded-lg bg-amber-500/10 text-amber-400">
+            <i data-lucide="file-text" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-white text-base">Müşteriye Sunulacak Hizmet & Ortaklık Teklif Özeti</h3>
+            <p class="text-xs text-slate-400">Dışarıya hizmet verirken müşterinize şeffaf biçimde sunabileceğiniz hazır mesaj</p>
+          </div>
+        </div>
+
+        <button id="copy-proposal-action" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 transition">
+          <i data-lucide="copy" class="w-4 h-4"></i>
+          <span id="copy-btn-text">Kopyala</span>
+        </button>
+      </div>
+
+      <div class="bg-crypto-950 p-4 rounded-xl border border-slate-800/80 font-mono text-xs sm:text-sm text-slate-300 leading-relaxed whitespace-pre-line" id="proposal-text">
+        Yükleniyor...
+      </div>
+    </section>
+
+
+    <!-- 5. Full 1 - 365 Days Interactive Table -->
+    <section class="glass-card rounded-2xl p-6 border border-slate-800 space-y-4">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h2 class="text-lg font-bold text-white flex items-center gap-2">
+            <i data-lucide="table" class="w-5 h-5 text-emerald-400"></i>
+            1'den 365'e Kadar Günlük Ayrıntılı Döküm
+          </h2>
+          <p class="text-xs text-slate-400">Her gün müşterinin kasasında biriken para ve senin aldığın komisyon kesintisi</p>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-3">
+          <!-- Search input -->
+          <div class="relative w-40 sm:w-48">
+            <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+            <input type="text" id="table-search" placeholder="Gün ara (örn: 24)..."
+              class="w-full bg-crypto-900 border border-slate-700 rounded-lg py-1.5 pl-9 pr-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 font-mono" />
+          </div>
+
+          <!-- Page size -->
+          <div class="flex items-center gap-2 text-xs text-slate-400">
+            <span>Göster:</span>
+            <select id="table-pagesize" class="bg-crypto-900 border border-slate-700 rounded-lg py-1.5 px-2.5 text-xs text-white focus:outline-none focus:border-emerald-500 font-mono">
+              <option value="30">30 Gün</option>
+              <option value="60">60 Gün (2 Ay)</option>
+              <option value="100">100 Gün</option>
+              <option value="365" selected>Tümü (365 Gün)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Table Wrapper -->
+      <div class="overflow-x-auto rounded-xl border border-slate-800 max-h-[600px] overflow-y-auto">
+        <table class="w-full text-left text-xs font-mono border-collapse" id="main-table">
+          <thead class="bg-crypto-900 text-slate-300 font-semibold sticky top-0 z-20 shadow border-b border-slate-800">
+            <tr>
+              <th class="py-3 px-3">GÜN</th>
+              <th class="py-3 px-3">BAŞLANGIÇ BAKİYESİ</th>
+              <th class="py-3 px-3 text-cyan-400">BRÜT KÂR</th>
+              <th class="py-3 px-3 text-amber-400">HİZMET KOMİSYONU</th>
+              <th class="py-3 px-3 text-emerald-400">NET GÜNLÜK KÂR</th>
+              <th class="py-3 px-3 text-white">GÜN SONU KASA</th>
+              <th class="py-3 px-3 text-amber-400">TOPLAM KOMİSYON</th>
+              <th class="py-3 px-3 text-right">NET BÜYÜME (ROI)</th>
+            </tr>
+          </thead>
+          <tbody id="table-body" class="divide-y divide-slate-800/60 bg-crypto-950/50">
+            <!-- Dynamically generated rows -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Table Footer / Pagination -->
+      <div class="flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-400 pt-2">
+        <div id="table-status">365 gün gösteriliyor</div>
+        <div class="flex items-center gap-2" id="pagination-controls">
+          <button id="prev-page-btn" class="px-2.5 py-1 rounded bg-crypto-800 hover:bg-crypto-700 disabled:opacity-40 disabled:cursor-not-allowed">Önceki</button>
+          <span id="page-num-display" class="font-mono text-white">1 / 1</span>
+          <button id="next-page-btn" class="px-2.5 py-1 rounded bg-crypto-800 hover:bg-crypto-700 disabled:opacity-40 disabled:cursor-not-allowed">Sonraki</button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Notification Toast -->
+  <div id="toast" class="fixed bottom-6 right-6 z-50 transform translate-y-20 opacity-0 transition-all duration-300 pointer-events-none">
+    <div class="bg-emerald-600 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 border border-emerald-400/30">
+      <i data-lucide="check-circle-2" class="w-5 h-5 text-white"></i>
+      <span id="toast-message" class="text-xs font-semibold">Panoya kopyalandı!</span>
+    </div>
+  </div>
+
+  <!-- JavaScript Logic -->
+  <script>
+    // State management
+    const state = {
+      capital: 1000,
+      dailyRoi: 3.0, // %
+      commission: 20.0, // %
+      days: 365,
+      currency: 'USD',
+      mode: 'daily', // 'daily' (nakit kesinti) or 'gross' (komisyonsuz)
+      chartScale: 'logarithmic',
+      pageSize: 365,
+      currentPage: 1,
+      searchQuery: '',
+      historyData: []
+    };
+
+    const currencySymbols = {
+      USD: '$',
+      TRY: '₺',
+      EUR: '€'
+    };
+
+    let chartInstance = null;
+
+    // Currency Formatter
+    function formatMoney(amount, decimals = 2) {
+      const sym = currencySymbols[state.currency] || '$';
+      if (isNaN(amount) || amount === null) return `${sym}0.00`;
+      
+      const formatted = amount.toLocaleString('tr-TR', {
+        minimumFractionDigits: decimals,
+        maximumFractionDigits: decimals
+      });
+      return `${sym}${formatted}`;
+    }
+
+    function formatCompactMoney(amount) {
+      const sym = currencySymbols[state.currency] || '$';
+      if (amount >= 1e6) {
+        return `${sym}${(amount / 1e6).toFixed(2)}M`;
+      }
+      if (amount >= 1e3) {
+        return `${sym}${(amount / 1e3).toFixed(1)}K`;
+      }
+      return `${sym}${amount.toFixed(2)}`;
+    }
+
+    // Calculation Engine
+    function calculateData() {
+      const P0 = parseFloat(state.capital) || 0;
+      const r = (parseFloat(state.dailyRoi) || 0) / 100;
+      const c = state.mode === 'daily' ? (parseFloat(state.commission) || 0) / 100 : 0;
+      const totalDays = parseInt(state.days) || 365;
+
+      const data = [];
+      let currentBalance = P0;
+      let cumCommission = 0;
+
+      for (let d = 1; d <= totalDays; d++) {
+        const startBalance = currentBalance;
+        const grossProfit = startBalance * r;
+        const commissionPaid = grossProfit * c;
+        const netProfit = grossProfit - commissionPaid;
+        const endBalance = startBalance + netProfit;
+        
+        cumCommission += commissionPaid;
+        const cumNetProfit = endBalance - P0;
+        const roiPercent = P0 > 0 ? (cumNetProfit / P0) * 100 : 0;
+        const multiplier = P0 > 0 ? endBalance / P0 : 1;
+
+        data.push({
+          day: d,
+          startBalance,
+          grossProfit,
+          commissionPaid,
+          netProfit,
+          endBalance,
+          cumCommission,
+          cumNetProfit,
+          roiPercent,
+          multiplier
+        });
+
+        currentBalance = endBalance;
+      }
+
+      state.historyData = data;
+      return data;
+    }
+
+    // Render Milestone Cards
+    function renderMilestones() {
+      const data = state.historyData;
+      if (!data || data.length === 0) return;
+
+      const getDayData = (d) => {
+        if (d <= data.length) return data[d - 1];
+        return data[data.length - 1];
+      };
+
+      // 24. Gün
+      const d24 = getDayData(24);
+      if (d24) {
+        document.getElementById('m-24-balance').textContent = formatMoney(d24.endBalance);
+        document.getElementById('m-24-profit').textContent = `+${d24.roiPercent.toFixed(1)}% Net Kâr (${d24.multiplier.toFixed(2)}x)`;
+        document.getElementById('m-24-comm').textContent = formatMoney(d24.cumCommission);
+        document.getElementById('m-24-daily').textContent = formatMoney(d24.netProfit);
+      }
+
+      // 60. Gün (2 Ay)
+      const d60 = getDayData(60);
+      if (d60) {
+        document.getElementById('m-60-balance').textContent = formatMoney(d60.endBalance);
+        document.getElementById('m-60-profit').textContent = `+${d60.roiPercent.toFixed(1)}% Net Kâr (${d60.multiplier.toFixed(2)}x)`;
+        document.getElementById('m-60-comm').textContent = formatMoney(d60.cumCommission);
+        document.getElementById('m-60-daily').textContent = formatMoney(d60.netProfit);
+      }
+
+      // 365. Gün (1 Yıl)
+      const d365 = getDayData(Math.min(state.days, 365));
+      if (d365) {
+        document.getElementById('m-365-balance').textContent = formatMoney(d365.endBalance);
+        document.getElementById('m-365-profit').textContent = `+${d365.roiPercent.toLocaleString('tr-TR', {maximumFractionDigits: 0})}% (${d365.multiplier.toLocaleString('tr-TR', {maximumFractionDigits: 1})}x)`;
+        document.getElementById('m-365-comm').textContent = formatMoney(d365.cumCommission);
+        document.getElementById('m-365-daily').textContent = formatMoney(d365.netProfit);
+      }
+
+      // Smaller Milestones
+      const miniDays = [7, 14, 30, 90, 120, 180, 270];
+      miniDays.forEach(day => {
+        const item = getDayData(day);
+        const balEl = document.getElementById(`m-${day}-balance`);
+        const commEl = document.getElementById(`m-${day}-comm`);
+        if (balEl && item) balEl.textContent = formatCompactMoney(item.endBalance);
+        if (commEl && item) commEl.textContent = `Kom: ${formatCompactMoney(item.cumCommission)}`;
+      });
+    }
+
+    // Render Formula Banner
+    function renderFormulaBanner() {
+      const gross = parseFloat(state.dailyRoi);
+      const commRate = state.mode === 'daily' ? parseFloat(state.commission) : 0;
+      const net = gross * (1 - commRate / 100);
+      const effComm = gross * (commRate / 100);
+
+      document.getElementById('formula-gross-rate').textContent = `%${gross.toFixed(2)}`;
+      document.getElementById('formula-comm-rate').textContent = `%${commRate.toFixed(2)}`;
+      document.getElementById('formula-net-rate').textContent = `%${net.toFixed(2)}`;
+      document.getElementById('formula-eff-comm').textContent = `%${effComm.toFixed(2)}`;
+      document.getElementById('formula-eff-net').textContent = `%${net.toFixed(2)}`;
+    }
+
+    // Render Proposal Text
+    function renderProposal() {
+      const data = state.historyData;
+      if (!data || data.length === 0) return;
+
+      const d24 = data[Math.min(23, data.length - 1)];
+      const d60 = data[Math.min(59, data.length - 1)];
+      const d365 = data[Math.min(364, data.length - 1)];
+
+      const sym = currencySymbols[state.currency];
+      const netRate = state.dailyRoi * (1 - state.commission / 100);
+
+      const text = `📊 KRİPTO PORTFÖY YÖNETİMİ & BİLEŞİK GETİRİ SİMÜLASYONU
+--------------------------------------------------
+💰 Başlangıç Ana Parası: ${formatMoney(state.capital)}
+📈 Günlük Brüt Hedef Kâr: %${state.dailyRoi.toFixed(2)}
+🤝 Hizmet Başarı Komisyonu: %${state.commission.toFixed(2)} (Sadece kârdan kesilir)
+⚡ Günlük Müşteri Net Büyümesi: %${netRate.toFixed(2)}
+
+📅 ÖNEMLİ DÖNÜM NOKTALARI:
+--------------------------------------------------
+🚀 24 Gün Sonra:
+   • Müşteri Kasası: ${formatMoney(d24.endBalance)} (+%${d24.roiPercent.toFixed(1)} Kâr)
+   • Hizmet Sağlayıcıya Ödenen Toplam Komisyon: ${formatMoney(d24.cumCommission)}
+
+🚀 2 Ay (60 Gün) Sonra:
+   • Müşteri Kasası: ${formatMoney(d60.endBalance)} (+%${d60.roiPercent.toFixed(1)} Kâr - ${d60.multiplier.toFixed(2)} Kat)
+   • Hizmet Sağlayıcıya Ödenen Toplam Komisyon: ${formatMoney(d60.cumCommission)}
+
+👑 1 Yıl (365 Gün) Sonra:
+   • Müşteri Kasası: ${formatMoney(d365.endBalance)} (${d365.multiplier.toLocaleString('tr-TR', {maximumFractionDigits: 1})} Kat)
+   • Hizmet Sağlayıcıya Ödenen Toplam Komisyon: ${formatMoney(d365.cumCommission)}
+
+* Not: Komisyon tutarı günlük kârdan anlık olarak tahsil edilir; müşterinin kalan net kârı ana paraya eklenerek bileşik büyümeye devam eder.`;
+
+      document.getElementById('proposal-text').textContent = text;
+    }
+
+    // Render Table with Pagination & Search
+    function renderTable() {
+      const tbody = document.getElementById('table-body');
+      tbody.innerHTML = '';
+
+      let filtered = state.historyData;
+      if (state.searchQuery.trim() !== '') {
+        const q = state.searchQuery.trim().toLowerCase();
+        filtered = filtered.filter(item => item.day.toString() === q || item.day.toString().includes(q));
+      }
+
+      const totalItems = filtered.length;
+      const pageSize = parseInt(state.pageSize);
+      const totalPages = Math.ceil(totalItems / pageSize) || 1;
+      
+      if (state.currentPage > totalPages) state.currentPage = totalPages;
+      if (state.currentPage < 1) state.currentPage = 1;
+
+      const startIndex = (state.currentPage - 1) * pageSize;
+      const endIndex = Math.min(startIndex + pageSize, totalItems);
+      const pageItems = filtered.slice(startIndex, endIndex);
+
+      const specialDays = new Set([7, 14, 24, 30, 60, 90, 120, 180, 270, 365]);
+
+      pageItems.forEach(row => {
+        const tr = document.createElement('tr');
+        tr.id = `row-day-${row.day}`;
+        tr.className = 'hover:bg-slate-800/40 transition duration-150 group';
+
+        const isSpecial = specialDays.has(row.day);
+        let badgeHtml = '';
+        if (row.day === 24) {
+          badgeHtml = '<span class="ml-1.5 px-1.5 py-0.5 text-[10px] font-bold rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">24. Gün</span>';
+        } else if (row.day === 60) {
+          badgeHtml = '<span class="ml-1.5 px-1.5 py-0.5 text-[10px] font-bold rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">2 Ay</span>';
+        } else if (row.day === 365) {
+          badgeHtml = '<span class="ml-1.5 px-1.5 py-0.5 text-[10px] font-bold rounded bg-purple-500/20 text-purple-300 border border-purple-500/30">1 Yıl</span>';
+        }
+
+        tr.innerHTML = `
+          <td class="py-2.5 px-3 font-bold ${isSpecial ? 'text-cyan-400' : 'text-slate-400'}">
+            Gün ${row.day} ${badgeHtml}
+          </td>
+          <td class="py-2.5 px-3 text-slate-300 font-mono">${formatMoney(row.startBalance)}</td>
+          <td class="py-2.5 px-3 text-cyan-400 font-mono">+${formatMoney(row.grossProfit)}</td>
+          <td class="py-2.5 px-3 text-amber-400 font-mono font-semibold">-${formatMoney(row.commissionPaid)}</td>
+          <td class="py-2.5 px-3 text-emerald-400 font-mono font-semibold">+${formatMoney(row.netProfit)}</td>
+          <td class="py-2.5 px-3 text-white font-mono font-bold">${formatMoney(row.endBalance)}</td>
+          <td class="py-2.5 px-3 text-amber-300 font-mono">${formatMoney(row.cumCommission)}</td>
+          <td class="py-2.5 px-3 text-right font-mono font-semibold text-emerald-400">
+            +${row.roiPercent.toFixed(1)}% <span class="text-slate-500 text-[10px]">(${row.multiplier.toFixed(2)}x)</span>
+          </td>
+        `;
+
+        tbody.appendChild(tr);
+      });
+
+      // Update footer
+      document.getElementById('table-status').textContent = `Toplam ${totalItems} günden ${startIndex + 1} - ${endIndex} arası listeleniyor`;
+      document.getElementById('page-num-display').textContent = `${state.currentPage} / ${totalPages}`;
+      document.getElementById('prev-page-btn').disabled = state.currentPage <= 1;
+      document.getElementById('next-page-btn').disabled = state.currentPage >= totalPages;
+    }
+
+    // Jump to specific day in table
+    window.jumpToDay = function(targetDay) {
+      state.pageSize = 365;
+      document.getElementById('table-pagesize').value = '365';
+      state.searchQuery = '';
+      document.getElementById('table-search').value = '';
+      state.currentPage = 1;
+      renderTable();
+
+      setTimeout(() => {
+        const row = document.getElementById(`row-day-${targetDay}`);
+        if (row) {
+          row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          row.classList.remove('row-highlight');
+          void row.offsetWidth; // trigger reflow
+          row.classList.add('row-highlight');
+        }
+      }, 100);
+    };
+
+    // Render Chart
+    function renderChart() {
+      const data = state.historyData;
+      if (!data || data.length === 0) return;
+
+      const ctx = document.getElementById('growthChart').getContext('2d');
+      const labels = data.map(d => `G${d.day}`);
+      const clientBalances = data.map(d => d.endBalance);
+      const cumulativeCommissions = data.map(d => d.cumCommission);
+      const dailyCommissions = data.map(d => d.commissionPaid);
+
+      if (chartInstance) {
+        chartInstance.destroy();
+      }
+
+      chartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [
+            {
+              label: 'Müşteri Net Kasası ($)',
+              data: clientBalances,
+              borderColor: '#10b981',
+              backgroundColor: 'rgba(16, 185, 129, 0.1)',
+              borderWidth: 2.5,
+              fill: true,
+              tension: 0.2,
+              pointRadius: (ctx) => {
+                const index = ctx.dataIndex + 1;
+                return (index === 24 || index === 60 || index === 365) ? 6 : 0;
+              },
+              pointBackgroundColor: '#10b981',
+              pointBorderColor: '#ffffff'
+            },
+            {
+              label: 'Sana Ödenen Toplam Komisyon ($)',
+              data: cumulativeCommissions,
+              borderColor: '#f59e0b',
+              backgroundColor: 'rgba(245, 158, 11, 0.08)',
+              borderWidth: 2,
+              fill: true,
+              tension: 0.2,
+              pointRadius: (ctx) => {
+                const index = ctx.dataIndex + 1;
+                return (index === 24 || index === 60 || index === 365) ? 5 : 0;
+              },
+              pointBackgroundColor: '#f59e0b'
+            },
+            {
+              label: 'O Günlük Komisyon ($)',
+              data: dailyCommissions,
+              borderColor: '#06b6d4',
+              backgroundColor: 'transparent',
+              borderWidth: 1.5,
+              borderDash: [4, 4],
+              tension: 0.2,
+              pointRadius: 0
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: {
+            mode: 'index',
+            intersect: false
+          },
+          plugins: {
+            legend: {
+              display: false
+            },
+            tooltip: {
+              backgroundColor: 'rgba(11, 16, 27, 0.95)',
+              titleColor: '#ffffff',
+              bodyColor: '#e2e8f0',
+              borderColor: '#334155',
+              borderWidth: 1,
+              padding: 12,
+              callbacks: {
+                label: function(context) {
+                  let label = context.dataset.label || '';
+                  if (label) label += ': ';
+                  if (context.parsed.y !== null) {
+                    label += formatMoney(context.parsed.y);
+                  }
+                  return label;
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: {
+                color: 'rgba(255, 255, 255, 0.04)'
+              },
+              ticks: {
+                color: '#64748b',
+                maxTicksLimit: 14,
+                font: { family: 'JetBrains Mono', size: 11 }
+              }
+            },
+            y: {
+              type: state.chartScale,
+              grid: {
+                color: 'rgba(255, 255, 255, 0.04)'
+              },
+              ticks: {
+                color: '#64748b',
+                font: { family: 'JetBrains Mono', size: 11 },
+                callback: function(value) {
+                  return formatCompactMoney(value);
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // CSV Export Handler
+    function exportToCSV() {
+      const data = state.historyData;
+      if (!data || data.length === 0) return;
+
+      const sym = state.currency;
+      let csv = '\uFEFF'; // UTF-8 BOM for Excel
+      csv += `Gun;Baslangic Bakiyesi (${sym});Brut Gunluk Kar (${sym});Kesilen Hizmet Komisyonu (${sym});Net Gunluk Kar (${sym});Gun Sonu Bakiye (${sym});Kumulatif Toplam Komisyon (${sym});Net ROI (%);Büyüme Çarpanı\r\n`;
+
+      data.forEach(r => {
+        csv += `${r.day};${r.startBalance.toFixed(2)};${r.grossProfit.toFixed(2)};${r.commissionPaid.toFixed(2)};${r.netProfit.toFixed(2)};${r.endBalance.toFixed(2)};${r.cumCommission.toFixed(2)};${r.roiPercent.toFixed(2)};${r.multiplier.toFixed(2)}x\r\n`;
+      });
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', `Kripto_Bilesik_Getiri_Simulasyonu_${state.capital}${sym}_${state.dailyRoi}pct.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      showToast('Excel/CSV dosyası başarıyla indirildi!');
+    }
+
+    // Toast notification
+    function showToast(message) {
+      const toast = document.getElementById('toast');
+      const toastMsg = document.getElementById('toast-message');
+      toastMsg.textContent = message;
+      toast.classList.remove('translate-y-20', 'opacity-0');
+      toast.classList.add('translate-y-0', 'opacity-100');
+
+      setTimeout(() => {
+        toast.classList.remove('translate-y-0', 'opacity-100');
+        toast.classList.add('translate-y-20', 'opacity-0');
+      }, 3000);
+    }
+
+    // Copy to clipboard
+    function copyProposalToClipboard() {
+      const text = document.getElementById('proposal-text').textContent;
+      navigator.clipboard.writeText(text).then(() => {
+        showToast('Müşteri teklif metni panoya kopyalandı!');
+        const btnText = document.getElementById('copy-btn-text');
+        if (btnText) {
+          btnText.textContent = 'Kopyalandı!';
+          setTimeout(() => btnText.textContent = 'Kopyala', 2000);
+        }
+      }).catch(err => {
+        showToast('Kopyalama başarısız oldu.');
+      });
+    }
+
+    // Sync all updates
+    function updateAll() {
+      calculateData();
+      renderMilestones();
+      renderFormulaBanner();
+      renderProposal();
+      renderTable();
+      renderChart();
+    }
+
+    // Initialize Event Listeners
+    function init() {
+      // Capital inputs
+      const capInput = document.getElementById('initial-capital');
+      const capDisplay = document.getElementById('capital-display');
+      capInput.addEventListener('input', (e) => {
+        state.capital = parseFloat(e.target.value) || 0;
+        capDisplay.textContent = formatMoney(state.capital);
+        updateAll();
+      });
+
+      document.querySelectorAll('.capital-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const val = parseFloat(btn.dataset.val);
+          state.capital = val;
+          capInput.value = val;
+          capDisplay.textContent = formatMoney(val);
+          document.querySelectorAll('.capital-btn').forEach(b => {
+            b.className = 'capital-btn px-2 py-1 text-xs rounded bg-crypto-800 hover:bg-slate-700 text-slate-300 font-mono';
+          });
+          btn.className = 'capital-btn px-2 py-1 text-xs rounded bg-emerald-500/20 text-emerald-300 font-mono font-bold border border-emerald-500/30';
+          updateAll();
+        });
+      });
+
+      // Daily ROI inputs
+      const roiSlider = document.getElementById('daily-roi-slider');
+      const roiInput = document.getElementById('daily-roi');
+      const roiDisplay = document.getElementById('daily-roi-display');
+
+      const syncRoi = (val) => {
+        state.dailyRoi = parseFloat(val) || 0;
+        roiSlider.value = state.dailyRoi;
+        roiInput.value = state.dailyRoi;
+        roiDisplay.textContent = `%${state.dailyRoi.toFixed(2)}`;
+        updateAll();
+      };
+      roiSlider.addEventListener('input', (e) => syncRoi(e.target.value));
+      roiInput.addEventListener('input', (e) => syncRoi(e.target.value));
+
+      document.querySelectorAll('.roi-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const val = parseFloat(btn.dataset.val);
+          syncRoi(val);
+          document.querySelectorAll('.roi-btn').forEach(b => {
+            b.className = 'roi-btn px-2 py-1 text-xs rounded bg-crypto-800 hover:bg-slate-700 text-slate-300 font-mono';
+          });
+          btn.className = 'roi-btn px-2 py-1 text-xs rounded bg-cyan-500/20 text-cyan-300 font-mono font-bold border border-cyan-500/30';
+        });
+      });
+
+      // Commission inputs
+      const commSlider = document.getElementById('commission-slider');
+      const commInput = document.getElementById('commission-rate');
+      const commDisplay = document.getElementById('commission-display');
+
+      const syncComm = (val) => {
+        state.commission = parseFloat(val) || 0;
+        commSlider.value = state.commission;
+        commInput.value = state.commission;
+        commDisplay.textContent = `%${state.commission.toFixed(2)}`;
+        updateAll();
+      };
+      commSlider.addEventListener('input', (e) => syncComm(e.target.value));
+      commInput.addEventListener('input', (e) => syncComm(e.target.value));
+
+      document.querySelectorAll('.comm-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const val = parseFloat(btn.dataset.val);
+          syncComm(val);
+          document.querySelectorAll('.comm-btn').forEach(b => {
+            b.className = 'comm-btn px-2 py-1 text-xs rounded bg-crypto-800 hover:bg-slate-700 text-slate-300 font-mono';
+          });
+          btn.className = 'comm-btn px-2 py-1 text-xs rounded bg-amber-500/20 text-amber-300 font-mono font-bold border border-amber-500/30';
+        });
+      });
+
+      // Days inputs
+      const daysSlider = document.getElementById('days-slider');
+      const daysInput = document.getElementById('total-days');
+      const daysDisplay = document.getElementById('days-display');
+
+      const syncDays = (val) => {
+        state.days = parseInt(val) || 365;
+        daysSlider.value = state.days;
+        daysInput.value = state.days;
+        daysDisplay.textContent = `${state.days} Gün`;
+        updateAll();
+      };
+      daysSlider.addEventListener('input', (e) => syncDays(e.target.value));
+      daysInput.addEventListener('input', (e) => syncDays(e.target.value));
+
+      document.querySelectorAll('.days-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const val = parseInt(btn.dataset.val);
+          syncDays(val);
+          document.querySelectorAll('.days-btn').forEach(b => {
+            b.className = 'days-btn px-2 py-1 text-xs rounded bg-crypto-800 hover:bg-slate-700 text-slate-300 font-mono';
+          });
+          btn.className = 'days-btn px-2 py-1 text-xs rounded bg-purple-500/20 text-purple-300 font-mono font-bold border border-purple-500/30';
+        });
+      });
+
+      // Currency selector
+      document.querySelectorAll('.currency-pill').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.currency-pill').forEach(b => {
+            b.className = 'currency-pill px-2.5 py-1 rounded-lg text-slate-400 hover:text-white transition';
+          });
+          btn.className = 'currency-pill px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-400 font-semibold transition';
+          state.currency = btn.dataset.currency;
+          document.querySelectorAll('.currency-symbol').forEach(el => el.textContent = currencySymbols[state.currency]);
+          capDisplay.textContent = formatMoney(state.capital);
+          updateAll();
+        });
+      });
+
+      // Mode switch
+      const modeDailyBtn = document.getElementById('mode-daily');
+      const modeGrossBtn = document.getElementById('mode-gross');
+      modeDailyBtn.addEventListener('click', () => {
+        state.mode = 'daily';
+        modeDailyBtn.className = 'px-2.5 py-1 rounded-lg bg-amber-500/20 text-amber-300 font-semibold border border-amber-500/30 transition';
+        modeGrossBtn.className = 'px-2.5 py-1 rounded-lg text-slate-400 hover:text-white transition';
+        updateAll();
+      });
+      modeGrossBtn.addEventListener('click', () => {
+        state.mode = 'gross';
+        modeGrossBtn.className = 'px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 font-semibold border border-emerald-500/30 transition';
+        modeDailyBtn.className = 'px-2.5 py-1 rounded-lg text-slate-400 hover:text-white transition';
+        updateAll();
+      });
+
+      // Chart scale buttons
+      const scaleLogBtn = document.getElementById('scale-log');
+      const scaleLinBtn = document.getElementById('scale-linear');
+      scaleLogBtn.addEventListener('click', () => {
+        state.chartScale = 'logarithmic';
+        scaleLogBtn.className = 'px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-400 font-semibold transition';
+        scaleLinBtn.className = 'px-2.5 py-1 rounded-lg text-slate-400 hover:text-white transition';
+        renderChart();
+      });
+      scaleLinBtn.addEventListener('click', () => {
+        state.chartScale = 'linear';
+        scaleLinBtn.className = 'px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-400 font-semibold transition';
+        scaleLogBtn.className = 'px-2.5 py-1 rounded-lg text-slate-400 hover:text-white transition';
+        renderChart();
+      });
+
+      // Table search & pagination
+      document.getElementById('table-search').addEventListener('input', (e) => {
+        state.searchQuery = e.target.value;
+        state.currentPage = 1;
+        renderTable();
+      });
+
+      document.getElementById('table-pagesize').addEventListener('change', (e) => {
+        state.pageSize = parseInt(e.target.value);
+        state.currentPage = 1;
+        renderTable();
+      });
+
+      document.getElementById('prev-page-btn').addEventListener('click', () => {
+        if (state.currentPage > 1) {
+          state.currentPage--;
+          renderTable();
+        }
+      });
+
+      document.getElementById('next-page-btn').addEventListener('click', () => {
+        state.currentPage++;
+        renderTable();
+      });
+
+      // Copy buttons
+      document.getElementById('copy-proposal-btn').addEventListener('click', copyProposalToClipboard);
+      document.getElementById('copy-proposal-action').addEventListener('click', copyProposalToClipboard);
+
+      // Export CSV
+      document.getElementById('export-csv-btn').addEventListener('click', exportToCSV);
+
+      // Render Lucide icons
+      lucide.createIcons();
+
+      // Initial calculation & render
+      updateAll();
+    }
+
+    // Run on DOM ready
+    window.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>

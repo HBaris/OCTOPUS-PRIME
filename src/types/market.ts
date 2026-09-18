@@ -110,3 +110,73 @@ export interface OrderResult {
   simulated?: boolean;
   timestamp: string;
 }
+
+export interface TechnicalIndicatorSignal {
+  symbol: string;
+  timeframe: string;
+  lastPrice: number;
+  ema9: number;
+  ema21: number;
+  emaCross: 'BULLISH' | 'BEARISH' | 'NEUTRAL';
+  rsi14: number;
+  rsiCondition: 'OVERSOLD' | 'OVERBOUGHT' | 'NEUTRAL';
+  volumeSpikeRatio: number;
+  volumeSpikeDetected: boolean;
+  bidAskImbalance: number; // -1.0 (heavy sell) to +1.0 (heavy buy)
+  suggestedAction: 'BUY' | 'SELL' | 'HOLD';
+  confidenceScore: number; // 0 - 100
+  timestamp: string;
+}
+
+export interface SocialSignal {
+  id: string;
+  source: 'telegram' | 'threads';
+  channelOrUser: string;
+  coin: string;
+  sentiment: 'POSITIVE' | 'NEGATIVE' | 'NEUTRAL';
+  rawContent: string;
+  confidenceScore: number; // 0 - 100 (default lower due to noise)
+  timestamp: string;
+}
+
+export interface LearningRule {
+  id: string;
+  description: string;
+  conditionType: 'TECHNICAL' | 'NEWS' | 'SOCIAL' | 'HYBRID';
+  pattern: string;
+  confidenceBonus: number; // % bonus added to score (0 for Hypothesis, 5-10 for Weak, 20-25 for Strong)
+  observationCount: number;
+  independentSources: string[];
+  regimesSeen: ('BULL' | 'BEAR' | 'SIDEWAYS')[];
+  tier: 'HYPOTHESIS' | 'WEAK_RULE' | 'STRONG_RULE';
+  successCount: number;
+  failCount: number;
+  successRate: number;
+  recentTradeOutcomes: boolean[]; // Last 20 outcomes for decay tracking
+  createdAt: string;
+  lastUpdated: string;
+}
+
+export interface CooldownReport {
+  id: string;
+  haltedAt: string;
+  resumedAt?: string;
+  durationMinutes: number;
+  reason: string;
+  consecutiveLosses: number;
+  misleadingChannels: string[];
+  failedRules: string[];
+  averageLossConfidence: number;
+  analystDiagnosis: string;
+  recommendations: string[];
+}
+
+export interface CircuitBreakerState {
+  isHalted: boolean;
+  haltedAt?: string;
+  resumeAt?: string;
+  remainingSeconds: number;
+  consecutiveLosses: number;
+  lastReport?: CooldownReport;
+}
+

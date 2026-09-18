@@ -67,7 +67,7 @@ export const ROOMS: RoomConfig[] = [
     name: 'Portföy Odası',
     shortName: 'Portföy',
     icon: '💰',
-    agentRoles: ['Portföy Muhasebecisi', 'BTC Analisti', 'ETH Analisti', 'SOL Analisti'],
+    agentRoles: ['Portföy Muhasebecisi'],
   },
   {
     key: 'SignalsRoomScene',
@@ -203,39 +203,6 @@ export const AGENT_CONFIGS: AgentVisualConfig[] = [
     bodyColor: 0x8b5cf6, // Violet
     hairColor: 0x4c1d95,
     shirtColor: 0xa78bfa,
-    deskColor: 0x334155,
-  },
-  {
-    role: 'BTC Analisti',
-    name: 'BTC Analisti',
-    avatarIcon: '₿',
-    sceneKey: 'PortfolioRoomScene',
-    roomTitle: 'Portföy Odası',
-    bodyColor: 0xf59e0b, // Bitcoin Orange
-    hairColor: 0x78350f,
-    shirtColor: 0xfde047,
-    deskColor: 0x334155,
-  },
-  {
-    role: 'ETH Analisti',
-    name: 'ETH Analisti',
-    avatarIcon: 'Ξ',
-    sceneKey: 'PortfolioRoomScene',
-    roomTitle: 'Portföy Odası',
-    bodyColor: 0x6366f1, // Ethereum Indigo
-    hairColor: 0x312e81,
-    shirtColor: 0x818cf8,
-    deskColor: 0x334155,
-  },
-  {
-    role: 'SOL Analisti',
-    name: 'SOL Analisti',
-    avatarIcon: '◎',
-    sceneKey: 'PortfolioRoomScene',
-    roomTitle: 'Portföy Odası',
-    bodyColor: 0x14f195, // Solana Green
-    hairColor: 0x064e3b,
-    shirtColor: 0x5eead4,
     deskColor: 0x334155,
   },
 

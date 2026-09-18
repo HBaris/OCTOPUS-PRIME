@@ -11,7 +11,13 @@ export type EventType =
   | 'ORDER_EXECUTED'
   | 'SPENDING_LIMIT_WARNING'
   | 'LIQUIDATION_RISK_WARNING'
-  | 'SYSTEM_STATUS';
+  | 'SYSTEM_STATUS'
+  | 'TECHNICAL_SIGNAL'
+  | 'SOCIAL_SIGNAL'
+  | 'LEARNING_RULE_UPDATED'
+  | 'TRADING_HALTED'
+  | 'TRADING_RESUMED'
+  | 'COOLDOWN_REPORT_READY';
 
 export type AgentRole =
   | 'Haber Takip'
@@ -20,9 +26,6 @@ export type AgentRole =
   | 'Portföy Muhasebecisi'
   | 'Sinyal Avcısı'
   | 'Patron'
-  | 'BTC Analisti'
-  | 'ETH Analisti'
-  | 'SOL Analisti'
   | 'Makro Ekonomist'
   | 'Whale Takipçisi'
   | 'Düzenleyici İzleyici'
@@ -32,7 +35,7 @@ export type AgentRole =
   | 'Görev Takipçisi'
   | 'Baş Danışman';
 
-export type AgentState = 'IDLE' | 'ANALYZING' | 'ALERTING' | 'TRADING' | 'SALUTING';
+export type AgentState = 'IDLE' | 'ANALYZING' | 'ALERTING' | 'TRADING' | 'SALUTING' | 'COOLDOWN';
 
 export type SceneSeverity = 'HAFİF' | 'ORTA' | 'AĞIR' | 'ÇOK AĞIR' | 'KATASTROFİK';
 
@@ -86,6 +89,73 @@ export interface LiquidationRiskWarningPayload {
   warningMessage: string;
   timestamp: string;
 }
+
+export interface TechnicalSignalPayload {
+  symbol: string;
+  timeframe: string;
+  lastPrice: number;
+  ema9: number;
+  ema21: number;
+  emaCross: 'BULLISH' | 'BEARISH' | 'NEUTRAL';
+  rsi14: number;
+  rsiCondition: 'OVERSOLD' | 'OVERBOUGHT' | 'NEUTRAL';
+  volumeSpikeRatio: number;
+  volumeSpikeDetected: boolean;
+  bidAskImbalance: number;
+  suggestedAction: 'BUY' | 'SELL' | 'HOLD';
+  confidenceScore: number;
+  timestamp: string;
+}
+
+export interface SocialSignalPayload {
+  id: string;
+  source: 'telegram' | 'threads';
+  channelOrUser: string;
+  coin: string;
+  sentiment: 'POSITIVE' | 'NEGATIVE' | 'NEUTRAL';
+  rawContent: string;
+  confidenceScore: number;
+  timestamp: string;
+}
+
+export interface LearningRuleUpdatedPayload {
+  ruleId: string;
+  description: string;
+  tier: 'HYPOTHESIS' | 'WEAK_RULE' | 'STRONG_RULE';
+  confidenceBonus: number;
+  observationCount: number;
+  regimesSeen: string[];
+  action: 'PROMOTED' | 'DEMOTED' | 'DECAYED' | 'CREATED';
+  timestamp: string;
+}
+
+export interface TradingHaltedPayload {
+  haltedAt: string;
+  resumeAt: string;
+  durationMinutes: number;
+  reason: string;
+  consecutiveLosses: number;
+  reportId: string;
+}
+
+export interface TradingResumedPayload {
+  resumedAt: string;
+  reason: string;
+}
+
+export interface CooldownReportPayload {
+  id: string;
+  haltedAt: string;
+  durationMinutes: number;
+  reason: string;
+  consecutiveLosses: number;
+  misleadingChannels: string[];
+  failedRules: string[];
+  averageLossConfidence: number;
+  analystDiagnosis: string;
+  recommendations: string[];
+}
+
 
 export interface PortfolioUpdatePayload {
   totalBalanceUsd: number;

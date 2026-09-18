@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Crypto Trading Agent - Pixel Art Office & Open Positions</title>
+    <title>Octopus Prime - 3D Crypto Trading Office & Live Positions</title>
     <link rel="stylesheet" href="./src/style.css" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -11,7 +11,7 @@
   </head>
   <body>
     <div id="app-layout">
-      <!-- Left: Phaser 3 Office Scene -->
+      <!-- Left: 3D Three.js Trading Floor Office Scene -->
       <div id="game-container"></div>
 
       <!-- Right: Open Positions Live Candlestick Charts Panel -->
@@ -21,7 +21,10 @@
             <span class="panel-icon">📊</span>
             <h2>AÇIK POZİSYONLAR</h2>
           </div>
-          <span id="positions-count-badge" class="count-badge">0</span>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <a href="/calculator.html" target="_blank" style="text-decoration:none; background:#10b981; color:#070a13; font-size:9px; padding:4px 8px; border-radius:4px; font-weight:bold; cursor:pointer;" title="Bileşik Getiri & Komisyon Simülatörü">🧮 HESAPLAYICI</a>
+            <span id="positions-count-badge" class="count-badge">0</span>
+          </div>
         </div>
 
         <div id="positions-container" class="positions-list">

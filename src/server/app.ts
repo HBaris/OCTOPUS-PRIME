@@ -17,7 +17,13 @@ import { createSignalsRouter } from './routes/signals.route.js';
 import { createFeedbackRouter } from './routes/feedback.route.js';
 import { createAssistantRouter } from './routes/assistant.route.js';
 import { AssistantService } from '../services/assistant/AssistantService.js';
+import { createLearningRouter } from './routes/learning.route.js';
+import { createCooldownRouter } from './routes/cooldown.route.js';
+import { createAutoTradeRouter } from './routes/autotrade.route.js';
 import { errorHandler } from './middleware/errorHandler.js';
+import { LearningEngine } from '../services/learning/LearningEngine.js';
+import { CircuitBreaker } from '../services/risk/CircuitBreaker.js';
+import { AutoTradeEngine } from '../services/decision/AutoTradeEngine.js';
 
 export interface AppDependencies {
   agentManager: AgentManager;
@@ -28,6 +34,9 @@ export interface AppDependencies {
   decisionEngine: DecisionEngine;
   feedbackSystem: FeedbackSystem;
   assistantService?: AssistantService;
+  learningEngine?: LearningEngine;
+  circuitBreaker?: CircuitBreaker;
+  autoTradeEngine?: AutoTradeEngine;
 }
 
 export function createApp(deps: AppDependencies): Express {
@@ -36,6 +45,9 @@ export function createApp(deps: AppDependencies): Express {
   if (!exchange) {
     throw new Error('Neither exchangeService nor binanceService was provided to createApp.');
   }
+
+  const learningEngine = deps.learningEngine || deps.decisionEngine.getLearningEngine();
+  const circuitBreaker = deps.circuitBreaker || deps.decisionEngine.getCircuitBreaker();
 
   // 1. Security HTTP Headers
   app.use(helmet());
@@ -77,6 +89,11 @@ export function createApp(deps: AppDependencies): Express {
   app.use('/api/feedback', createFeedbackRouter(deps.feedbackSystem));
   const assistantService = deps.assistantService || new AssistantService();
   app.use('/api/assistant', createAssistantRouter(assistantService));
+  app.use('/api/learning', createLearningRouter(learningEngine));
+  app.use('/api/risk/cooldown', createCooldownRouter(circuitBreaker));
+  if (deps.autoTradeEngine) {
+    app.use('/api/autotrade', createAutoTradeRouter(deps.autoTradeEngine));
+  }
 
   // 404 Handler
   app.use((req, res) => {

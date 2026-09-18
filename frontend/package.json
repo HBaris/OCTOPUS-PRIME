@@ -9,8 +9,10 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@types/three": "^0.186.0",
     "lightweight-charts": "^5.2.1",
-    "phaser": "^3.88.2"
+    "phaser": "^3.88.2",
+    "three": "^0.186.0"
   },
   "devDependencies": {
     "@types/node": "^22.13.8",

@@ -809,15 +809,6 @@ export class PixelCharacterGenerator {
       ctx.fillStyle = palette.hairLight;
       ctx.fillRect(30, 9, 7, 6);
       ctx.fillRect(42, 9, 7, 5);
-      ctx.fillRect(54, 10, 6, 5);
-    } else if (role === 'BTC Analisti') {
-      // Tousled golden hair
-      ctx.fillRect(30, 12, 32, 15);
-      ctx.fillStyle = palette.hairBase;
-      ctx.fillRect(32, 14, 28, 11);
-      ctx.fillStyle = palette.hairLight;
-      ctx.fillRect(34, 9, 9, 6);
-      ctx.fillRect(46, 10, 8, 5);
     } else {
       // Standard clean side-part
       ctx.fillRect(32, 14, 32, 14);
@@ -1126,49 +1117,6 @@ export class PixelCharacterGenerator {
           tieColor: '#0f172a',
           eyeColor: '#db2777',
           trousersColor: '#18181b',
-        };
-      case 'BTC Analisti':
-        return {
-          skinTone,
-          skinShadow,
-          hairBase: '#f59e0b',
-          hairDark: '#78350f',
-          hairLight: '#fde047',
-          jacketBase: '#ea580c',
-          jacketDark: '#9a3412',
-          jacketLight: '#fb923c',
-          tieColor: '#fbbf24',
-          eyeColor: '#ea580c',
-          trousersColor: '#1e293b',
-          goldTrim: true,
-        };
-      case 'ETH Analisti':
-        return {
-          skinTone,
-          skinShadow,
-          hairBase: '#4338ca',
-          hairDark: '#1e1b4b',
-          hairLight: '#6366f1',
-          jacketBase: '#4f46e5',
-          jacketDark: '#312e81',
-          jacketLight: '#818cf8',
-          tieColor: '#c084fc',
-          eyeColor: '#6366f1',
-          trousersColor: '#1e1b4b',
-        };
-      case 'SOL Analisti':
-        return {
-          skinTone,
-          skinShadow,
-          hairBase: '#0d9488',
-          hairDark: '#042f2e',
-          hairLight: '#14b8a6',
-          jacketBase: '#059669',
-          jacketDark: '#064e3b',
-          jacketLight: '#34d399',
-          tieColor: '#a855f7',
-          eyeColor: '#10b981',
-          trousersColor: '#042f2e',
         };
       case 'Makro Ekonomist':
         return {
