@@ -8,7 +8,7 @@ import { CircuitBreaker } from '../src/services/risk/CircuitBreaker.js';
 import { EventType } from '../src/config/constants.js';
 import { eventBus } from '../src/events/EventBus.js';
 
-describe('AutoTradeEngine & AltcoinScanner (Autonomous Micro-Scalping)', () => {
+describe('AutoTradeEngine & AltcoinScanner (Intelligent Dynamic Scalper)', () => {
   let binance: BinanceService;
   let circuitBreaker: CircuitBreaker;
   let autoTrade: AutoTradeEngine;
@@ -20,8 +20,9 @@ describe('AutoTradeEngine & AltcoinScanner (Autonomous Micro-Scalping)', () => {
     circuitBreaker = new CircuitBreaker(3, 30);
     autoTrade = new AutoTradeEngine(binance, circuitBreaker, {
       autoTradingEnabled: true,
-      targetProfitUsd: 0.30,
-      stopLossUsd: 0.60,
+      targetProfitPercent: 1.0,
+      trailingStopPercent: 0.3,
+      stopLossPercent: 1.5,
       marginPerTradeUsd: 15.0,
       maxConcurrentPositions: 4,
     });
@@ -43,7 +44,7 @@ describe('AutoTradeEngine & AltcoinScanner (Autonomous Micro-Scalping)', () => {
       capturedAction = evt;
     });
 
-    const result = await autoTrade.handleAutonomousTradeProposal({
+    await autoTrade.executeProposalAutonomous({
       proposalId: 'prop_test_1',
       signalId: 'sig_test_1',
       symbol: 'DOGE/USDT',
@@ -52,43 +53,47 @@ describe('AutoTradeEngine & AltcoinScanner (Autonomous Micro-Scalping)', () => {
       suggestedLeverage: 5,
       suggestedMarginMode: 'isolated',
       signalScore: 85,
-      status: 'SIMULATED',
+      status: 'PENDING_APPROVAL',
       isDryRun: true,
-      notes: 'Test Auto-Trade',
+      notes: 'Autonomous test proposal',
     });
 
-    expect(result).toBe(true);
     expect(autoTrade.getStats().totalAutoTrades).toBe(1);
     expect(capturedAction).not.toBeNull();
-    expect(capturedAction.payload.details).toContain('OTOMATİK İCRA');
+    expect(capturedAction.payload.actionName).toContain('Scalp Emri Açıldı');
   });
 
-  it('should auto-close position when target micro-profit (>= $0.30) is reached', async () => {
+  it('should auto-close position when dynamic take profit is reached', async () => {
     // Open a test position on Binance service
-    await binance.executeOrder('PEPE/USDT', 'BUY', 15.0);
+    await binance.executeOrder({
+      symbol: 'PEPE/USDT',
+      side: 'BUY',
+      amountUsd: 15.0,
+      type: 'MARKET',
+    });
 
-    // Mock an in-profit position
+    // Mock an in-profit position (+2% on $15 margin)
     const positions = await binance.fetchPositions();
     const pepePos = positions.find((p) => p.symbol.includes('PEPE'));
     if (pepePos) {
-      pepePos.unrealizedPnl = 0.35; // +35 cents profit!
+      pepePos.unrealizedPnl = 0.35; // +$0.35 profit
+      pepePos.marginUsed = 15.0;
     }
 
     let profitAction: any = null;
     eventBus.on(EventType.AGENT_ACTION, (evt) => {
-      if (evt.payload.actionName === 'Kâr Realize Edildi') {
+      if (evt.payload.actionName === 'Pozisyon Kapatıldı') {
         profitAction = evt;
       }
     });
 
-    await autoTrade.monitorAndHarvestMicroProfits();
+    await autoTrade.monitorAndHarvestProfits();
 
     expect(autoTrade.getStats().profitableExits).toBeGreaterThanOrEqual(1);
     expect(profitAction).not.toBeNull();
-    expect(profitAction.payload.details).toContain('PASİF GELİR');
   });
 
-  it('should scan altcoins and detect micro-scalping opportunities', async () => {
+  it('should scan altcoins and detect opportunities', async () => {
     const opp = await scanner.analyzeAltcoinOpportunity('DOGE/USDT');
     expect(opp).not.toBeNull();
     expect(opp?.symbol).toBe('DOGE/USDT');

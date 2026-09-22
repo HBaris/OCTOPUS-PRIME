@@ -5,6 +5,7 @@ import { AgentBehaviorController } from './AgentBehaviorController.ts';
 import { AGENT_CONFIGS } from '../config.ts';
 import { wsService } from '../services/websocket.ts';
 import { SceneSeverityPayload } from '../types/events.ts';
+import { roomOverlayManager, RoomId } from '../services/roomOverlayManager.ts';
 
 export class Office3DApp {
   private container: HTMLElement;
@@ -148,15 +149,14 @@ export class Office3DApp {
     hud.innerHTML = `
       <div class="hud-room-bar">
         <button class="hud-btn active" data-room="all">🏢 Tüm Ofis</button>
-        <button class="hud-btn" data-room="management">🎩 Yönetim</button>
-        <button class="hud-btn" data-room="trading">🤖 İşlem & Risk</button>
-        <button class="hud-btn" data-room="news">📰 Haber Odası</button>
-        <button class="hud-btn" data-room="signals">⚡ Sinyal Odası</button>
-        <button class="hud-btn" data-room="coffee">☕ Kahve Barı</button>
-        <button class="hud-btn" data-room="balcony">🚬 Balkon</button>
+        <button class="hud-btn" data-room="scanner">🌐 1. Dinamik Tarayıcı</button>
+        <button class="hud-btn" data-room="scalp">⚡ 2. Dinamik Scalper</button>
+        <button class="hud-btn" data-room="intelligence">🕵️ 3. Öncü İstihbarat & Balina</button>
+        <button class="hud-btn" data-room="technical">📈 4. Teknik Analiz & Direnç</button>
+        <button class="hud-btn" data-room="news">📰 5. Makro & Haber</button>
       </div>
       <div class="hud-info-tag">
-        <span>💡 <b>İpucu:</b> Karakterlere tıklayarak konuşabilir, fareyle ofisi 360° çevirebilirsiniz.</span>
+        <span>💡 <b>İpucu:</b> İstediğiniz odaya tıklayarak canlı grafiklerini, emirlerini veya tüyolarını açabilirsiniz.</span>
       </div>
     `;
 
@@ -168,37 +168,34 @@ export class Office3DApp {
       btn.addEventListener('click', (e) => {
         hud.querySelectorAll('.hud-btn').forEach((b) => b.classList.remove('active'));
         (e.currentTarget as HTMLElement).classList.add('active');
-        const room = (e.currentTarget as HTMLElement).dataset.room;
-        this.focusOnRoom(room || 'all');
+        const room = ((e.currentTarget as HTMLElement).dataset.room || 'all') as RoomId;
+        this.focusOnRoom(room);
+        roomOverlayManager.openRoom(room);
       });
     });
   }
 
   public focusOnRoom(roomKey: string): void {
     switch (roomKey) {
-      case 'management':
-        this.targetCameraPos.set(-7.5, 9, 2);
-        this.targetLookAt.set(-7.5, 1, -5.5);
+      case 'scanner':
+        this.targetCameraPos.set(-8, 10, 8);
+        this.targetLookAt.set(-7.5, 1, 0);
         break;
-      case 'trading':
-        this.targetCameraPos.set(-7.5, 10, 13);
+      case 'scalp':
+        this.targetCameraPos.set(-7.5, 10, 14);
         this.targetLookAt.set(-7.5, 1, 5.5);
         break;
+      case 'intelligence':
+        this.targetCameraPos.set(0, 9, 2);
+        this.targetLookAt.set(0, 1, -5.5);
+        break;
+      case 'technical':
+        this.targetCameraPos.set(8, 10, 8);
+        this.targetLookAt.set(7.5, 1, 0);
+        break;
       case 'news':
-        this.targetCameraPos.set(7.5, 9, 2);
-        this.targetLookAt.set(7.5, 1, -5.5);
-        break;
-      case 'signals':
-        this.targetCameraPos.set(7.5, 10, 13);
+        this.targetCameraPos.set(7.5, 10, 14);
         this.targetLookAt.set(7.5, 1, 5.5);
-        break;
-      case 'coffee':
-        this.targetCameraPos.set(0, 6, 3);
-        this.targetLookAt.set(0, 1, -2.5);
-        break;
-      case 'balcony':
-        this.targetCameraPos.set(0, 6, 17);
-        this.targetLookAt.set(0, 1, 11);
         break;
       case 'all':
       default:

@@ -6,6 +6,18 @@ import { TechnicalIndicatorSignal, Candle } from '../../types/market.js';
 import { logger } from '../../utils/logger.js';
 import { config } from '../../config/index.js';
 
+export interface RadarCoinItem {
+  symbol: string;
+  lastPrice: number;
+  rsi14: number;
+  rsiCondition: 'OVERSOLD' | 'OVERBOUGHT' | 'NEUTRAL';
+  emaCross: 'BULLISH' | 'BEARISH' | 'NEUTRAL';
+  volume24hUsd: number;
+  momentumScore: number;
+  suggestedAction: 'BUY' | 'SELL' | 'HOLD';
+  updatedAt: string;
+}
+
 export class AltcoinScannerService {
   private exchangeService: IExchangeService;
   private decisionEngine: DecisionEngine;
@@ -15,36 +27,39 @@ export class AltcoinScannerService {
   private priceHistories: Map<string, number[]> = new Map();
   private volumeHistories: Map<string, number[]> = new Map();
   private currentSymbolIndex: number = 0;
+  private radarMap: Map<string, RadarCoinItem> = new Map();
 
-  constructor(exchangeService: IExchangeService, decisionEngine: DecisionEngine, symbols = config.ALTCOIN_SYMBOLS) {
+  // Comprehensive list of active USDT altcoin markets across Binance & OKX
+  public static readonly DEFAULT_UNIVERSE = [
+    'SOL/USDT', 'AVAX/USDT', 'NEAR/USDT', 'SUI/USDT', 'APT/USDT',
+    'ARB/USDT', 'OP/USDT', 'LINK/USDT', 'INJ/USDT', 'TIA/USDT',
+    'RENDER/USDT', 'FET/USDT', 'DOGE/USDT', 'PEPE/USDT', 'SHIB/USDT',
+    'ADA/USDT', 'DOT/USDT', 'ATOM/USDT', 'MATIC/USDT', 'ICP/USDT',
+    'SEI/USDT', 'JUP/USDT', 'WIF/USDT', 'BONK/USDT', 'FTM/USDT',
+    'STX/USDT', 'RUNE/USDT', 'KAS/USDT', 'GALA/USDT', 'FIL/USDT',
+    'LTC/USDT', 'BCH/USDT', 'UNI/USDT', 'AAVE/USDT', 'MKR/USDT',
+    'CRV/USDT', 'LDO/USDT', 'DYDX/USDT', 'BLUR/USDT', 'PYTH/USDT',
+  ];
+
+  constructor(exchangeService: IExchangeService, decisionEngine: DecisionEngine, symbols?: string[]) {
     this.exchangeService = exchangeService;
     this.decisionEngine = decisionEngine;
-    this.symbols = symbols.length > 0 ? symbols : [
-      'DOGE/USDT',
-      'PEPE/USDT',
-      'AVAX/USDT',
-      'LINK/USDT',
-      'SUI/USDT',
-      'NEAR/USDT',
-      'ARB/USDT',
-      'OP/USDT',
-      'APT/USDT',
-      'XRP/USDT',
-      'SOL/USDT',
-      'BNB/USDT',
-    ];
+    this.symbols = symbols && symbols.length > 0 ? symbols : AltcoinScannerService.DEFAULT_UNIVERSE;
   }
 
   public async start(): Promise<void> {
-    logger.info(`🔍 [AltcoinScanner] Starting autonomous altcoin opportunity scanner across ${this.symbols.length} pairs (${this.symbols.join(', ')})...`);
+    logger.info(
+      `🔍 [AltcoinScanner] Universal Market Scanner started. Monitoring dynamic universe of ${this.symbols.length} altcoin pairs...`
+    );
 
-    // Initial seed
-    for (const sym of this.symbols) {
+    // Initial seed for top 10 coins
+    const seedBatch = this.symbols.slice(0, 12);
+    for (const sym of seedBatch) {
       await this.seedSymbolData(sym);
     }
 
     if (config.NODE_ENV !== 'test') {
-      const intervalMs = config.ALTCOIN_SCAN_INTERVAL_SEC * 1000;
+      const intervalMs = config.ALTCOIN_SCAN_INTERVAL_SEC * 1000 || 6000;
       this.scanTimer = setInterval(() => {
         this.scanNextAltcoinBatch();
       }, intervalMs);
@@ -56,7 +71,7 @@ export class AltcoinScannerService {
       clearInterval(this.scanTimer);
       this.scanTimer = null;
     }
-    logger.info('🛑 [AltcoinScanner] Altcoin scanner stopped.');
+    logger.info('🛑 [AltcoinScanner] Universal market scanner stopped.');
   }
 
   private async seedSymbolData(symbol: string): Promise<void> {
@@ -66,9 +81,8 @@ export class AltcoinScannerService {
         this.priceHistories.set(symbol, candles.map((c: Candle) => c.close));
         this.volumeHistories.set(symbol, candles.map((c: Candle) => c.volume || 100));
       }
-    } catch (err) {
-      // Provide healthy initial baseline
-      const base = symbol.includes('PEPE') ? 0.000009 : symbol.includes('DOGE') ? 0.14 : 25.0;
+    } catch {
+      const base = symbol.includes('PEPE') ? 0.000009 : symbol.includes('DOGE') ? 0.14 : symbol.includes('SOL') ? 140 : 25.0;
       this.priceHistories.set(symbol, [base * 0.98, base * 0.99, base * 1.0, base * 1.01, base]);
       this.volumeHistories.set(symbol, [1000, 1200, 1100, 1500, 1400]);
     }
@@ -79,15 +93,15 @@ export class AltcoinScannerService {
     this.isScanning = true;
 
     try {
-      // Scan 2-3 altcoins per tick in a round-robin rotation
-      const batchSize = 3;
+      // Scan 4 altcoins per tick in a continuous round-robin cycle
+      const batchSize = 4;
       for (let i = 0; i < batchSize; i++) {
         const symbol = this.symbols[this.currentSymbolIndex % this.symbols.length];
         this.currentSymbolIndex++;
         await this.analyzeAltcoinOpportunity(symbol);
       }
     } catch (err) {
-      logger.warn('⚠️ [AltcoinScanner] Error during altcoin scan tick:', (err as Error).message);
+      logger.warn('⚠️ [AltcoinScanner] Error during altcoin scan batch:', (err as Error).message);
     } finally {
       this.isScanning = false;
     }
@@ -118,24 +132,17 @@ export class AltcoinScannerService {
       let suggestedAction: 'BUY' | 'SELL' | 'HOLD' = 'HOLD';
       let confidenceScore = 50;
 
-      // Micro-scalp momentum trigger logic:
-      // 1. Oversold Dip + Bullish EMA -> Strong BUY (Micro-scalp long)
+      // Dynamic momentum & scalp opportunity logic:
       if (rsiCondition === 'OVERSOLD' || (rsi14 <= 36 && emaCross === 'BULLISH')) {
         suggestedAction = 'BUY';
         confidenceScore = Math.min(95, Math.round(75 + (35 - rsi14) * 2));
-      }
-      // 2. Overbought Peak + Bearish EMA -> Strong SELL (Micro-scalp short)
-      else if (rsiCondition === 'OVERBOUGHT' || (rsi14 >= 64 && emaCross === 'BEARISH')) {
+      } else if (rsiCondition === 'OVERBOUGHT' || (rsi14 >= 64 && emaCross === 'BEARISH')) {
         suggestedAction = 'SELL';
         confidenceScore = Math.min(95, Math.round(75 + (rsi14 - 65) * 2));
-      }
-      // 3. Golden Cross with healthy RSI (40-60)
-      else if (emaCross === 'BULLISH' && rsi14 >= 42 && rsi14 <= 58) {
+      } else if (emaCross === 'BULLISH' && rsi14 >= 42 && rsi14 <= 58) {
         suggestedAction = 'BUY';
         confidenceScore = 74;
-      }
-      // 4. Death Cross with healthy RSI
-      else if (emaCross === 'BEARISH' && rsi14 >= 42 && rsi14 <= 58) {
+      } else if (emaCross === 'BEARISH' && rsi14 >= 42 && rsi14 <= 58) {
         suggestedAction = 'SELL';
         confidenceScore = 74;
       }
@@ -149,22 +156,35 @@ export class AltcoinScannerService {
         emaCross,
         rsi14: Math.round(rsi14 * 10) / 10,
         rsiCondition,
-        volumeSpikeRatio: 1.2,
-        volumeSpikeDetected: false,
+        volumeSpikeRatio: 1.4,
+        volumeSpikeDetected: confidenceScore >= 75,
         bidAskImbalance: 0.1,
         suggestedAction,
         confidenceScore,
         timestamp: new Date().toISOString(),
       };
 
+      // Update radar item for Room 1
+      this.radarMap.set(symbol, {
+        symbol,
+        lastPrice,
+        rsi14: signal.rsi14,
+        rsiCondition,
+        emaCross,
+        volume24hUsd: ticker.volume24h || 15000000,
+        momentumScore: confidenceScore,
+        suggestedAction,
+        updatedAt: new Date().toISOString(),
+      });
+
       if (suggestedAction !== 'HOLD' && confidenceScore >= 70) {
         logger.info(
-          `🎯 [AltcoinScanner] Micro-Scalp Opportunity: ${suggestedAction} ${symbol} | RSI: ${signal.rsi14} (${signal.rsiCondition}) | EMA: ${signal.emaCross} | Score: ${confidenceScore}/100`
+          `🎯 [AltcoinScanner] Hot Opportunity: ${suggestedAction} ${symbol} | RSI: ${signal.rsi14} (${signal.rsiCondition}) | EMA: ${signal.emaCross} | Score: ${confidenceScore}/100`
         );
 
         eventBus.publish(EventType.TECHNICAL_SIGNAL, signal);
 
-        // Feed directly into DecisionEngine
+        // Send to DecisionEngine
         await this.decisionEngine.evaluateMultiChannelSignal({
           symbol,
           technicalSignal: signal,
@@ -176,6 +196,10 @@ export class AltcoinScannerService {
       logger.debug(`[AltcoinScanner] Error analyzing ${symbol}: ${(err as Error).message}`);
       return null;
     }
+  }
+
+  public getRadarList(): RadarCoinItem[] {
+    return Array.from(this.radarMap.values()).sort((a, b) => b.momentumScore - a.momentumScore);
   }
 
   private calculateEMA(data: number[], period: number): number {

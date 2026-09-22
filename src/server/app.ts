@@ -20,10 +20,14 @@ import { AssistantService } from '../services/assistant/AssistantService.js';
 import { createLearningRouter } from './routes/learning.route.js';
 import { createCooldownRouter } from './routes/cooldown.route.js';
 import { createAutoTradeRouter } from './routes/autotrade.route.js';
+import { createRoomsRouter } from './routes/rooms.route.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { LearningEngine } from '../services/learning/LearningEngine.js';
 import { CircuitBreaker } from '../services/risk/CircuitBreaker.js';
 import { AutoTradeEngine } from '../services/decision/AutoTradeEngine.js';
+import { AltcoinScannerService } from '../services/market/AltcoinScannerService.js';
+import { EarlyLeakScannerService } from '../services/intelligence/EarlyLeakScannerService.js';
+import { TechnicalAnalysisService } from '../services/analysis/TechnicalAnalysisService.js';
 
 export interface AppDependencies {
   agentManager: AgentManager;
@@ -37,6 +41,9 @@ export interface AppDependencies {
   learningEngine?: LearningEngine;
   circuitBreaker?: CircuitBreaker;
   autoTradeEngine?: AutoTradeEngine;
+  altcoinScannerService?: AltcoinScannerService;
+  earlyLeakScannerService?: EarlyLeakScannerService;
+  technicalAnalysisService?: TechnicalAnalysisService;
 }
 
 export function createApp(deps: AppDependencies): Express {
@@ -48,11 +55,15 @@ export function createApp(deps: AppDependencies): Express {
 
   const learningEngine = deps.learningEngine || deps.decisionEngine.getLearningEngine();
   const circuitBreaker = deps.circuitBreaker || deps.decisionEngine.getCircuitBreaker();
+  const autoTradeEngine = deps.autoTradeEngine || new AutoTradeEngine(exchange, circuitBreaker);
+  const altcoinScannerService = deps.altcoinScannerService || new AltcoinScannerService(exchange, deps.decisionEngine);
+  const earlyLeakScannerService = deps.earlyLeakScannerService || new EarlyLeakScannerService(learningEngine, exchange);
+  const technicalAnalysisService = deps.technicalAnalysisService || new TechnicalAnalysisService(exchange);
 
   // 1. Security HTTP Headers
   app.use(helmet());
 
-  // 2. Strict CORS Configuration (Only configured origin allowed, no wildcard)
+  // 2. Strict CORS Configuration
   const allowedOrigins = [
     config.FRONTEND_ORIGIN,
     'http://localhost:5173',
@@ -63,7 +74,6 @@ export function createApp(deps: AppDependencies): Express {
   app.use(
     cors({
       origin: (origin, callback) => {
-        // Allow requests with no origin (e.g. mobile apps, curl, server-to-server)
         if (!origin) return callback(null, true);
         if (allowedOrigins.includes(origin) || origin.startsWith('http://localhost:')) {
           return callback(null, true);
@@ -87,13 +97,26 @@ export function createApp(deps: AppDependencies): Express {
   app.use('/api/news', createNewsRouter(deps.newsRadar, deps.keywordsManager));
   app.use('/api/signals', createSignalsRouter(deps.decisionEngine));
   app.use('/api/feedback', createFeedbackRouter(deps.feedbackSystem));
+
   const assistantService = deps.assistantService || new AssistantService();
   app.use('/api/assistant', createAssistantRouter(assistantService));
   app.use('/api/learning', createLearningRouter(learningEngine));
   app.use('/api/risk/cooldown', createCooldownRouter(circuitBreaker));
-  if (deps.autoTradeEngine) {
-    app.use('/api/autotrade', createAutoTradeRouter(deps.autoTradeEngine));
-  }
+  app.use('/api/autotrade', createAutoTradeRouter(autoTradeEngine));
+
+  // 5. Rooms API Router (5 Distinct Department Rooms)
+  app.use(
+    '/api/rooms',
+    createRoomsRouter({
+      altcoinScannerService,
+      autoTradeEngine,
+      earlyLeakScannerService,
+      technicalAnalysisService,
+      newsRadar: deps.newsRadar,
+      learningEngine,
+      exchangeService: exchange!,
+    })
+  );
 
   // 404 Handler
   app.use((req, res) => {
@@ -103,7 +126,7 @@ export function createApp(deps: AppDependencies): Express {
     });
   });
 
-  // 5. Centralized Error Handler (No stack trace leaks)
+  // 5. Centralized Error Handler
   app.use(errorHandler);
 
   return app;

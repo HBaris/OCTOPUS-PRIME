@@ -10,6 +10,7 @@ describe('CircuitBreaker (Cooldown & Post-Mortem Analysis)', () => {
   });
 
   afterEach(() => {
+    breaker.stop();
     breaker.resumeTrading('Test cleanup');
   });
 

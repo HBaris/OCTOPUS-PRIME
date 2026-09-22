@@ -21,7 +21,7 @@ export class OkxService implements IExchangeService {
   private isDemoTrading = true;
   private simulatedOrders: SimulatedOrder[] = [];
   private simulatedPositions: Map<string, PositionInfo> = new Map();
-  private mockBalanceUsdt = 10000.0;
+  private mockBalanceUsdt = 1000.0;
   private clientInitPromise: Promise<void> | null = null;
   private pollerTimer: NodeJS.Timeout | null = null;
 

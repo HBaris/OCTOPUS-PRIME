@@ -93,8 +93,18 @@ export class CircuitBreaker {
     this.resumeTimer = setTimeout(() => {
       this.resumeTrading('30 dakikalık cooldown süresi tamamlandı. Analiz modu sona erdi.');
     }, this.cooldownDurationMs);
+    if (this.resumeTimer && typeof (this.resumeTimer as any).unref === 'function') {
+      (this.resumeTimer as any).unref();
+    }
 
     return report;
+  }
+
+  public stop(): void {
+    if (this.resumeTimer) {
+      clearTimeout(this.resumeTimer);
+      this.resumeTimer = null;
+    }
   }
 
   public resumeTrading(reason: string = 'Manuel müdahale ile işlemler başlatıldı.'): void {

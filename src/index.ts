@@ -15,6 +15,8 @@ import { AssistantService } from './services/assistant/AssistantService.js';
 import { AutoTradeEngine } from './services/decision/AutoTradeEngine.js';
 import { MarketStreamService } from './services/market/MarketStreamService.js';
 import { AltcoinScannerService } from './services/market/AltcoinScannerService.js';
+import { EarlyLeakScannerService } from './services/intelligence/EarlyLeakScannerService.js';
+import { TechnicalAnalysisService } from './services/analysis/TechnicalAnalysisService.js';
 import { TelegramListener } from './services/social/TelegramListener.js';
 import { ThreadsObserver } from './services/social/ThreadsObserver.js';
 import { AgentManager } from './agents/AgentManager.js';
@@ -23,7 +25,7 @@ import { WebSocketServer } from './server/websocket/WebSocketServer.js';
 import { logger } from './utils/logger.js';
 
 async function bootstrap() {
-  logger.info('🚀 Initializing Octopus Prime 3-Channel Scalping Backend System...');
+  logger.info('🚀 Initializing Octopus Prime 5-Room Autonomous Trading & Intelligence System...');
 
   // 1. Initialize core data and analysis services
   const keywordsManager = new KeywordsManager('keywords.json');
@@ -45,12 +47,14 @@ async function bootstrap() {
     config.COOLDOWN_DURATION_MINUTES
   );
 
-  // 4. Initialize 3-Channel Sinks
+  // 4. Initialize Multi-Channel Sinks & Technical Analysis
   const marketStreamService = new MarketStreamService(exchangeService);
   const telegramListener = new TelegramListener();
   const threadsObserver = new ThreadsObserver();
+  const technicalAnalysisService = new TechnicalAnalysisService(exchangeService);
+  const earlyLeakScannerService = new EarlyLeakScannerService(learningEngine, exchangeService);
 
-  // 5. Initialize Decision Engine with 3-Channel synthesis
+  // 5. Initialize Decision Engine with Multi-Channel synthesis
   const decisionEngine = new DecisionEngine(
     exchangeService,
     correlationTracker,
@@ -59,7 +63,7 @@ async function bootstrap() {
     circuitBreaker
   );
 
-  // 6. Initialize Autonomous Auto-Trading & Altcoin Opportunity Scanner
+  // 6. Initialize Universal Altcoin Scanner & Smart Scalping Engine
   const autoTradeEngine = new AutoTradeEngine(exchangeService, circuitBreaker);
   const altcoinScannerService = new AltcoinScannerService(exchangeService, decisionEngine);
 
@@ -78,6 +82,9 @@ async function bootstrap() {
     learningEngine,
     circuitBreaker,
     autoTradeEngine,
+    altcoinScannerService,
+    earlyLeakScannerService,
+    technicalAnalysisService,
   });
 
   const server = http.createServer(app);
@@ -91,11 +98,12 @@ async function bootstrap() {
     newsRadar
   );
 
-  // 10. Start Background Streaming, Scanning & Auto-Trading Jobs
+  // 10. Start Background Streaming, Scanning, Intelligence & Auto-Trading Jobs
   correlationTracker.startMonitorLoop(30);
   newsRadar.startPeriodicScan(config.RSS_CHECK_INTERVAL_SEC);
   await marketStreamService.start();
   await altcoinScannerService.start();
+  await earlyLeakScannerService.start();
   await autoTradeEngine.start();
   await telegramListener.start();
   await threadsObserver.start();
@@ -104,8 +112,7 @@ async function bootstrap() {
   server.listen(config.PORT, () => {
     logger.info(`✨ REST API Server listening at http://localhost:${config.PORT}`);
     logger.info(`📡 WebSocket Event Stream ready at ws://localhost:${config.PORT}/ws`);
-    logger.info(`🤖 Autonomous Passive Income & Micro-Scalp Engine ACTIVE (Target: $${config.MICRO_SCALP_TARGET_USD}/trade)`);
-    logger.info('👾 3-Channel Pixel Art Office Visualizer backend is active and ready!');
+    logger.info(`🤖 5-Department Intelligence & Dynamic Scalper Ready! (Universal Scanner + Whale Leaks + S/R Breakouts)`);
   });
 
   // Graceful Shutdown
@@ -115,6 +122,7 @@ async function bootstrap() {
     correlationTracker.stop();
     marketStreamService.stop();
     altcoinScannerService.stop();
+    earlyLeakScannerService.stop();
     autoTradeEngine.stop();
     telegramListener.stop();
     threadsObserver.stop();

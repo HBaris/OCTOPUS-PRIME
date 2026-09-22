@@ -7,6 +7,10 @@ const toggleSchema = z.object({
   enabled: z.boolean(),
 });
 
+const commandSchema = z.object({
+  command: z.string().min(1),
+});
+
 export function createAutoTradeRouter(autoTradeEngine: AutoTradeEngine): Router {
   const router = Router();
 
@@ -15,6 +19,7 @@ export function createAutoTradeRouter(autoTradeEngine: AutoTradeEngine): Router 
       success: true,
       enabled: autoTradeEngine.isEnabled(),
       stats: autoTradeEngine.getStats(),
+      recentOrders: autoTradeEngine.getRecentOrders(),
     });
   });
 
@@ -25,8 +30,20 @@ export function createAutoTradeRouter(autoTradeEngine: AutoTradeEngine): Router 
       success: true,
       enabled: autoTradeEngine.isEnabled(),
       stats: autoTradeEngine.getStats(),
-      message: enabled ? 'Otonom Pasif Gelir Modu Aktif Edildi' : 'Otonom Mod Devre Dışı Bırakıldı',
+      message: enabled ? 'Dinamik Scalping Modu Aktif Edildi' : 'Otonom Mod Devre Dışı Bırakıldı',
     });
+  });
+
+  router.post('/command', validateBody(commandSchema), async (req, res) => {
+    try {
+      const { command } = req.body;
+      const result = await autoTradeEngine.processNaturalLanguageCommand(command);
+      res.json({
+        ...result,
+      });
+    } catch (err) {
+      res.status(500).json({ success: false, error: (err as Error).message });
+    }
   });
 
   return router;

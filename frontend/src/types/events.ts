@@ -17,7 +17,10 @@ export type EventType =
   | 'LEARNING_RULE_UPDATED'
   | 'TRADING_HALTED'
   | 'TRADING_RESUMED'
-  | 'COOLDOWN_REPORT_READY';
+  | 'COOLDOWN_REPORT_READY'
+  | 'EARLY_LEAK_DETECTED'
+  | 'SR_BREAKOUT_SIGNAL'
+  | 'ROOM_DATA_UPDATE';
 
 export type AgentRole =
   | 'Haber Takip'
