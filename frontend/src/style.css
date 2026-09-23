@@ -2051,6 +2051,8 @@ body {
   display: flex;
   flex-direction: column;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  margin-bottom: 16px;
+  width: 100%;
 }
 
 .pro-header-strip {
@@ -2058,13 +2060,13 @@ body {
   align-items: center;
   justify-content: space-between;
   background: #121824;
-  padding: 8px 16px;
+  padding: 10px 16px;
   border-bottom: 1px solid #1e293b;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 16px;
 }
 
-.pro-symbol-info {
+.pro-symbol-group {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -2084,51 +2086,57 @@ body {
 }
 
 .pro-symbol-title {
-  font-family: 'Press Start 2P', monospace;
-  font-size: 14px;
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 15px;
+  font-weight: 800;
   color: #f8fafc;
   letter-spacing: 0.5px;
+  margin: 0;
 }
 
-.pro-ticker-metrics {
+.pro-market-badge {
+  background: rgba(37, 99, 235, 0.2);
+  color: #60a5fa;
+  border: 1px solid rgba(59, 130, 246, 0.4);
+  font-family: monospace;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.pro-metrics-group {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 20px;
   font-family: monospace;
-  font-size: 12px;
 }
 
-.ticker-price {
-  font-size: 15px;
-  font-weight: 700;
-  color: #10b981;
-}
-
-.ticker-change.up {
-  color: #10b981;
-  font-weight: 600;
-}
-
-.ticker-change.down {
-  color: #ef4444;
-  font-weight: 600;
-}
-
-.metric-box {
+.pro-metric-item {
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
 
-.metric-label {
-  font-size: 9px;
+.metric-lbl {
+  font-size: 10px;
   color: #64748b;
   text-transform: uppercase;
+  font-weight: 600;
 }
 
 .metric-val {
+  font-size: 12px;
   color: #cbd5e1;
-  font-weight: 500;
+  font-weight: 700;
+}
+
+.metric-val.text-green {
+  color: #10b981;
+}
+
+.metric-val.text-red {
+  color: #ef4444;
 }
 
 .pro-timeframe-toolbar {
@@ -2136,8 +2144,9 @@ body {
   align-items: center;
   gap: 4px;
   background: #0f172a;
-  padding: 4px 12px;
-  border-bottom: 1px solid #1e293b;
+  padding: 4px;
+  border-radius: 6px;
+  border: 1px solid #1e293b;
 }
 
 .tf-btn {
@@ -2167,50 +2176,55 @@ body {
 .pro-chart-body {
   display: flex;
   flex: 1;
-  min-height: 420px;
+  min-height: 460px;
   position: relative;
   background: #0b0e14;
 }
 
-.pro-canvas-container {
-  flex: 1;
-  height: 100%;
-  min-height: 420px;
-  position: relative;
-}
-
-.orderbook-panel {
-  width: 220px;
+.pro-side-panel {
   background: #0f172a;
-  border-left: 1px solid #1e293b;
   display: flex;
   flex-direction: column;
-  padding: 8px;
+  padding: 10px;
   font-family: monospace;
   font-size: 11px;
 }
 
-.panel-title {
+.orderbook-panel {
+  width: 200px;
+  min-width: 200px;
+  border-right: 1px solid #1e293b;
+}
+
+.trades-panel {
+  width: 180px;
+  min-width: 180px;
+  border-left: 1px solid #1e293b;
+}
+
+.panel-header {
   font-size: 10px;
   font-weight: 700;
   color: #64748b;
   text-transform: uppercase;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
   letter-spacing: 0.5px;
 }
 
-.orderbook-asks {
+.orderbook-list {
   display: flex;
-  flex-direction: column-reverse;
-  gap: 2px;
-  margin-bottom: 6px;
+  flex-direction: column;
+  gap: 4px;
 }
 
-.orderbook-bids {
+.ob-section {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  margin-top: 6px;
+}
+
+.asks-section {
+  justify-content: flex-end;
 }
 
 .ob-row {
@@ -2218,59 +2232,87 @@ body {
   justify-content: space-between;
   padding: 2px 4px;
   border-radius: 2px;
-  position: relative;
+  font-size: 10px;
 }
 
 .ob-row.ask {
-  color: #ef4444;
-  background: rgba(239, 68, 68, 0.08);
+  color: #f87171;
+  background: rgba(239, 68, 68, 0.1);
 }
 
 .ob-row.bid {
-  color: #10b981;
-  background: rgba(16, 185, 129, 0.08);
+  color: #34d399;
+  background: rgba(16, 185, 129, 0.1);
 }
 
 .ob-mid-price {
   text-align: center;
   font-weight: bold;
   font-size: 13px;
-  padding: 4px 0;
+  padding: 6px 0;
   color: #38bdf8;
   border-top: 1px solid #1e293b;
   border-bottom: 1px solid #1e293b;
-}
-
-.trades-panel {
-  width: 180px;
-  background: #0b0e14;
-  border-left: 1px solid #1e293b;
-  display: flex;
-  flex-direction: column;
-  padding: 8px;
-  font-family: monospace;
-  font-size: 11px;
+  margin: 4px 0;
 }
 
 .trades-list {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 4px;
   overflow-y: auto;
-  max-height: 380px;
+  max-height: 400px;
 }
 
 .trade-row {
   display: flex;
   justify-content: space-between;
+  font-size: 10px;
 }
 
 .trade-row.buy {
-  color: #10b981;
+  color: #34d399;
 }
 
 .trade-row.sell {
-  color: #ef4444;
+  color: #f87171;
 }
+
+.pro-chart-canvas-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  min-height: 460px;
+  background: #090d16;
+}
+
+.pro-chart-legend {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 6px 16px;
+  background: rgba(15, 23, 42, 0.6);
+  border-bottom: 1px solid rgba(30, 41, 59, 0.5);
+  font-family: monospace;
+  font-size: 11px;
+}
+
+.legend-ma {
+  font-weight: 600;
+}
+
+.legend-ma.ma7 { color: #eab308; }
+.legend-ma.ma25 { color: #ec4899; }
+.legend-ma.ma99 { color: #3b82f6; }
+.legend-vol { color: #38bdf8; }
+
+.pro-chart-canvas {
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  min-height: 420px;
+}
+
 
 
