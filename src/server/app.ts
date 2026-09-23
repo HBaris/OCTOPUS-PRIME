@@ -21,6 +21,7 @@ import { createLearningRouter } from './routes/learning.route.js';
 import { createCooldownRouter } from './routes/cooldown.route.js';
 import { createAutoTradeRouter } from './routes/autotrade.route.js';
 import { createRoomsRouter } from './routes/rooms.route.js';
+import { createChatRoute } from './routes/chat.route.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { LearningEngine } from '../services/learning/LearningEngine.js';
 import { CircuitBreaker } from '../services/risk/CircuitBreaker.js';
@@ -28,6 +29,7 @@ import { AutoTradeEngine } from '../services/decision/AutoTradeEngine.js';
 import { AltcoinScannerService } from '../services/market/AltcoinScannerService.js';
 import { EarlyLeakScannerService } from '../services/intelligence/EarlyLeakScannerService.js';
 import { TechnicalAnalysisService } from '../services/analysis/TechnicalAnalysisService.js';
+import { ChatAssistantService } from '../services/ai/ChatAssistantService.js';
 
 export interface AppDependencies {
   agentManager: AgentManager;
@@ -44,6 +46,7 @@ export interface AppDependencies {
   altcoinScannerService?: AltcoinScannerService;
   earlyLeakScannerService?: EarlyLeakScannerService;
   technicalAnalysisService?: TechnicalAnalysisService;
+  chatAssistantService?: ChatAssistantService;
 }
 
 export function createApp(deps: AppDependencies): Express {
@@ -117,6 +120,19 @@ export function createApp(deps: AppDependencies): Express {
       exchangeService: exchange!,
     })
   );
+
+  // 6. AI Chat Assistant Router
+  const chatService =
+    deps.chatAssistantService ||
+    new ChatAssistantService({
+      learningEngine,
+      exchangeService: exchange!,
+      circuitBreaker,
+      autoTradeEngine,
+      newsRadar: deps.newsRadar,
+      decisionEngine: deps.decisionEngine,
+    });
+  app.use('/api/chat', createChatRoute(chatService));
 
   // 404 Handler
   app.use((req, res) => {

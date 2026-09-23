@@ -31,29 +31,31 @@ export class AltcoinScannerService {
 
   // Comprehensive list of active USDT altcoin markets across Binance & OKX
   public static readonly DEFAULT_UNIVERSE = [
-    'SOL/USDT', 'AVAX/USDT', 'NEAR/USDT', 'SUI/USDT', 'APT/USDT',
-    'ARB/USDT', 'OP/USDT', 'LINK/USDT', 'INJ/USDT', 'TIA/USDT',
-    'RENDER/USDT', 'FET/USDT', 'DOGE/USDT', 'PEPE/USDT', 'SHIB/USDT',
-    'ADA/USDT', 'DOT/USDT', 'ATOM/USDT', 'MATIC/USDT', 'ICP/USDT',
-    'SEI/USDT', 'JUP/USDT', 'WIF/USDT', 'BONK/USDT', 'FTM/USDT',
-    'STX/USDT', 'RUNE/USDT', 'KAS/USDT', 'GALA/USDT', 'FIL/USDT',
-    'LTC/USDT', 'BCH/USDT', 'UNI/USDT', 'AAVE/USDT', 'MKR/USDT',
-    'CRV/USDT', 'LDO/USDT', 'DYDX/USDT', 'BLUR/USDT', 'PYTH/USDT',
+    'BTC/USDT', 'ETH/USDT', 'SOL/USDT', 'AVAX/USDT', 'NEAR/USDT', 'SUI/USDT', 'APT/USDT',
+    'ARB/USDT', 'OP/USDT', 'LINK/USDT', 'INJ/USDT', 'TIA/USDT', 'RENDER/USDT', 'FET/USDT',
+    'DOGE/USDT', 'PEPE/USDT', 'SHIB/USDT', 'ADA/USDT', 'DOT/USDT', 'ATOM/USDT', 'MATIC/USDT',
+    'ICP/USDT', 'SEI/USDT', 'JUP/USDT', 'WIF/USDT', 'BONK/USDT', 'FTM/USDT', 'STX/USDT',
+    'RUNE/USDT', 'KAS/USDT', 'GALA/USDT', 'FIL/USDT', 'LTC/USDT', 'BCH/USDT', 'UNI/USDT',
+    'AAVE/USDT', 'MKR/USDT', 'CRV/USDT', 'LDO/USDT', 'DYDX/USDT', 'BLUR/USDT', 'PYTH/USDT',
+    'ALT/USDT', '1000CAT/USDT', '1000CHEEMS/USDT', '1000SATS/USDT', '1MBABYDOGE/USDT',
+    'ACE/USDT', 'ALGO/USDT', 'XRP/USDT', 'BNB/USDT',
   ];
 
   constructor(exchangeService: IExchangeService, decisionEngine: DecisionEngine, symbols?: string[]) {
     this.exchangeService = exchangeService;
     this.decisionEngine = decisionEngine;
-    this.symbols = symbols && symbols.length > 0 ? symbols : AltcoinScannerService.DEFAULT_UNIVERSE;
+    const provided = symbols && symbols.length > 0 ? symbols : config.ALTCOIN_SYMBOLS;
+    this.symbols = provided && provided.length > 0 ? provided : AltcoinScannerService.DEFAULT_UNIVERSE;
   }
 
   public async start(): Promise<void> {
+    await this.discoverExchangeMarkets();
     logger.info(
       `🔍 [AltcoinScanner] Universal Market Scanner started. Monitoring dynamic universe of ${this.symbols.length} altcoin pairs...`
     );
 
-    // Initial seed for top 10 coins
-    const seedBatch = this.symbols.slice(0, 12);
+    // Initial seed for top 15 coins
+    const seedBatch = this.symbols.slice(0, 15);
     for (const sym of seedBatch) {
       await this.seedSymbolData(sym);
     }
@@ -63,6 +65,26 @@ export class AltcoinScannerService {
       this.scanTimer = setInterval(() => {
         this.scanNextAltcoinBatch();
       }, intervalMs);
+    }
+  }
+
+  private async discoverExchangeMarkets(): Promise<void> {
+    try {
+      if (typeof (this.exchangeService as any).fetchMarkets === 'function') {
+        const markets = await (this.exchangeService as any).fetchMarkets();
+        if (Array.isArray(markets) && markets.length > 0) {
+          const usdtPairs = markets
+            .filter((m: any) => m.active !== false && (m.quote === 'USDT' || m.symbol?.endsWith('/USDT')))
+            .map((m: any) => m.symbol);
+          if (usdtPairs.length > 0) {
+            const set = new Set([...this.symbols, ...usdtPairs]);
+            this.symbols = Array.from(set);
+            logger.info(`🌐 [AltcoinScanner] Dynamically discovered ${usdtPairs.length} active USDT pairs from exchange.`);
+          }
+        }
+      }
+    } catch {
+      // Fall back to configured universe
     }
   }
 

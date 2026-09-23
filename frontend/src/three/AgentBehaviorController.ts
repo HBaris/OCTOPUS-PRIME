@@ -112,7 +112,7 @@ export class AgentBehaviorController {
       chosen.say('Bir bardak su alıp geliyorum...', 3000, '#38bdf8');
       chosen.walkTo(target, () => {
         chosen.currentState = 'DRINKING_WATER';
-        chosen.renderSpeechBubble(chosen.config.avatarIcon, chosen.name, 'Su Molası 💧', '#38bdf8');
+        chosen.say('Su Molası 💧', 5000, '#38bdf8');
         setTimeout(() => {
           if (chosen.currentState === 'DRINKING_WATER') {
             chosen.returnToDesk();

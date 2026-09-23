@@ -80,7 +80,7 @@ const envSchema = z.object({
   ALTCOIN_SCAN_INTERVAL_SEC: z.coerce.number().min(3).default(8),
   ALTCOIN_SYMBOLS: z
     .string()
-    .default('DOGE/USDT,PEPE/USDT,AVAX/USDT,LINK/USDT,SUI/USDT,NEAR/USDT,ARB/USDT,OP/USDT,APT/USDT,XRP/USDT,SOL/USDT,BNB/USDT')
+    .default('BTC/USDT,ETH/USDT,SOL/USDT,AVAX/USDT,NEAR/USDT,SUI/USDT,APT/USDT,ARB/USDT,OP/USDT,LINK/USDT,INJ/USDT,TIA/USDT,RENDER/USDT,FET/USDT,DOGE/USDT,PEPE/USDT,SHIB/USDT,ADA/USDT,DOT/USDT,ATOM/USDT,MATIC/USDT,ICP/USDT,SEI/USDT,JUP/USDT,WIF/USDT,BONK/USDT,FTM/USDT,STX/USDT,RUNE/USDT,KAS/USDT,GALA/USDT,FIL/USDT,LTC/USDT,BCH/USDT,UNI/USDT,AAVE/USDT,MKR/USDT,CRV/USDT,LDO/USDT,DYDX/USDT,BLUR/USDT,PYTH/USDT,ALT/USDT,1000CAT/USDT,1000CHEEMS/USDT,1000SATS/USDT,1MBABYDOGE/USDT,ACE/USDT,ALGO/USDT,XRP/USDT,BNB/USDT')
     .transform((val) =>
       val
         .split(',')
@@ -90,6 +90,21 @@ const envSchema = z.object({
   
   // Sentiment Model (Public multilingual sentiment model)
   SENTIMENT_MODEL: z.string().default('Xenova/distilbert-base-multilingual-cased-sentiments-student'),
+
+  // AI Conversational Intelligence & Brain Providers
+  AI_PROVIDER: z.enum(['auto', 'claude', 'gemini', 'openai', 'local']).default('auto'),
+  
+  // Anthropic Claude
+  ANTHROPIC_API_KEY: z.string().default(''),
+  CLAUDE_MODEL: z.string().default('claude-3-5-sonnet-20241022'),
+  
+  // Google Gemini
+  GEMINI_API_KEY: z.string().default(''),
+  AI_CHAT_MODEL: z.string().default('gemini-2.5-flash'),
+
+  // OpenAI
+  OPENAI_API_KEY: z.string().default(''),
+  OPENAI_MODEL: z.string().default('gpt-4o'),
 });
 
 const parsedEnv = envSchema.safeParse(process.env);

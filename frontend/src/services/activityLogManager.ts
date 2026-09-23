@@ -13,6 +13,8 @@ import {
   LiquidationRiskWarningPayload,
 } from '../types/events.ts';
 
+import { chatAssistantManager } from './chatAssistantManager.ts';
+
 export type LogCategory = 'ALL' | 'TRADE' | 'SIGNAL' | 'MANAGEMENT' | 'NEWS' | 'RISK' | 'SYSTEM';
 
 export interface ActivityLogItem {
@@ -193,6 +195,11 @@ export class ActivityLogManager {
       </div>
 
       <div class="header-actions">
+        <button id="btn-toggle-ai-chat" class="hdr-action-btn btn-ai-chat" title="Octopus AI Beyni ile Sohbet Et (Ctrl+Space)">
+          <span class="ai-chat-pulse"></span>
+          <span>🧠 AI ASİSTAN</span>
+        </button>
+
         <button id="btn-toggle-autotrade" class="hdr-action-btn btn-autotrade active" title="Otonom Pasif Gelir & Mikro-Scalping Modu">
           <span class="autotrade-pulse"></span>
           <span id="autotrade-text">🤖 OTO-TRADE: AKTİF ($0.30)</span>
@@ -214,6 +221,11 @@ export class ActivityLogManager {
     `;
 
     // Bind Header Buttons
+    const aiChatBtn = document.getElementById('btn-toggle-ai-chat');
+    if (aiChatBtn) {
+      aiChatBtn.addEventListener('click', () => chatAssistantManager.toggleDrawer());
+    }
+
     const autoTradeBtn = document.getElementById('btn-toggle-autotrade');
     const autoTradeText = document.getElementById('autotrade-text');
     let autoTradeActive = true;

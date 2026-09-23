@@ -311,10 +311,8 @@ export class Character3D {
     this.speechSprite = new THREE.Sprite(spriteMat);
     this.speechSprite.scale.set(2.4, 1.0, 1.0);
     this.speechSprite.position.set(0, 2.3, 0);
-    this.speechSprite.visible = true;
+    this.speechSprite.visible = false; // Hidden by default to avoid visual clutter
     this.group.add(this.speechSprite);
-
-    this.renderSpeechBubble(this.config.avatarIcon, this.name, 'Masada Analiz Yapıyor', '#38bdf8');
   }
 
   public renderSpeechBubble(icon: string, title: string, text: string, accentColor: string = '#10b981'): void {
@@ -365,14 +363,28 @@ export class Character3D {
     this.speechTexture.needsUpdate = true;
   }
 
-  public say(text: string, durationMs: number = 4000, accentColor: string = '#38bdf8'): void {
-    if (this.speechTimer) clearTimeout(this.speechTimer);
+  public say(text: string, durationMs: number = 5000, accentColor: string = '#38bdf8'): void {
+    if (this.speechTimer) {
+      clearTimeout(this.speechTimer);
+      this.speechTimer = null;
+    }
+
     this.renderSpeechBubble(this.config.avatarIcon, this.name, text, accentColor);
     this.speechSprite.visible = true;
 
+    // Auto-disappear after duration (default 5s) if no new update arrives
     this.speechTimer = setTimeout(() => {
-      this.renderSpeechBubble(this.config.avatarIcon, this.name, this.getDefaultStatusText(), '#64748b');
+      this.speechSprite.visible = false;
+      this.speechTimer = null;
     }, durationMs);
+  }
+
+  public hideSpeechBubble(): void {
+    if (this.speechTimer) {
+      clearTimeout(this.speechTimer);
+      this.speechTimer = null;
+    }
+    this.speechSprite.visible = false;
   }
 
   private getStateLabel(): string {
@@ -393,25 +405,6 @@ export class Character3D {
         return 'SİNYAL ALARMI ⚡';
       default:
         return 'Aktif';
-    }
-  }
-
-  private getDefaultStatusText(): string {
-    switch (this.currentState) {
-      case 'WORKING':
-        return 'Emir & Sinyal Bekliyor';
-      case 'DRINKING_COFFEE':
-        return 'Taze espresso yudumluyor...';
-      case 'SMOKING':
-        return 'Balkonda piyasayı izliyor...';
-      case 'DRINKING_WATER':
-        return 'Su sebilinden su içiyor...';
-      case 'CHATTING':
-        return 'Meslektaşı ile konuşuyor...';
-      case 'ALERT':
-        return 'İşleme müdahale ediyor!';
-      default:
-        return 'Görev başında';
     }
   }
 
@@ -459,7 +452,7 @@ export class Character3D {
       this.coffeeMugMesh.visible = true;
       this.cigaretteMesh.visible = false;
       this.smokeParticles.visible = true;
-      this.renderSpeechBubble(this.config.avatarIcon, this.name, 'Kahve Molası ☕', '#f59e0b');
+      this.say('Kahve Molası ☕', 5000, '#f59e0b');
       if (onArrive) onArrive();
     });
   }
@@ -471,7 +464,7 @@ export class Character3D {
       this.coffeeMugMesh.visible = false;
       this.cigaretteMesh.visible = true;
       this.smokeParticles.visible = true;
-      this.renderSpeechBubble(this.config.avatarIcon, this.name, 'Sigara Molası 🚬', '#94a3b8');
+      this.say('Sigara Molası 🚬', 5000, '#94a3b8');
       if (onArrive) onArrive();
     });
   }
@@ -485,7 +478,7 @@ export class Character3D {
     this.walkTo(this.deskPosition, () => {
       this.group.rotation.y = this.deskRotationY;
       this.setWorkingPose();
-      this.renderSpeechBubble(this.config.avatarIcon, this.name, 'Görev Başında', '#10b981');
+      this.say('Görev Başında', 3000, '#10b981');
       if (onComplete) onComplete();
     });
   }

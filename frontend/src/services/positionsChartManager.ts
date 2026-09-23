@@ -11,6 +11,7 @@ import {
 } from 'lightweight-charts';
 import { wsService } from './websocket.ts';
 import { apiService } from './api.ts';
+import { proChartManager } from './proChartManager.ts';
 import { PortfolioUpdatePayload, SystemStatusPayload, LiquidationRiskWarningPayload } from '../types/events.ts';
 
 interface PositionItem {
@@ -161,6 +162,12 @@ export class PositionsChartManager {
     const sideClass = side.toLowerCase();
     const leverage = pos.leverage || 5;
     const marginMode = pos.marginMode || 'isolated';
+
+    // Make card interactive: click to focus symbol in Pro Chart
+    cardEl.style.cursor = 'pointer';
+    cardEl.addEventListener('click', () => {
+      proChartManager.switchSymbol(pos.symbol);
+    });
 
     // Liquidation Warning Ribbon (Hidden by default)
     const liquidationWarningEl = document.createElement('div');

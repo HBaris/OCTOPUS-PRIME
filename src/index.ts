@@ -20,6 +20,7 @@ import { TechnicalAnalysisService } from './services/analysis/TechnicalAnalysisS
 import { TelegramListener } from './services/social/TelegramListener.js';
 import { ThreadsObserver } from './services/social/ThreadsObserver.js';
 import { AgentManager } from './agents/AgentManager.js';
+import { ChatAssistantService } from './services/ai/ChatAssistantService.js';
 import { createApp } from './server/app.js';
 import { WebSocketServer } from './server/websocket/WebSocketServer.js';
 import { logger } from './utils/logger.js';
@@ -67,10 +68,21 @@ async function bootstrap() {
   const autoTradeEngine = new AutoTradeEngine(exchangeService, circuitBreaker);
   const altcoinScannerService = new AltcoinScannerService(exchangeService, decisionEngine);
 
-  // 7. Initialize Agent Manager
+  // 7. Initialize AI Chat Assistant Service (Conversational Brain Core)
+  const chatAssistantService = new ChatAssistantService({
+    learningEngine,
+    ruleStore,
+    exchangeService,
+    circuitBreaker,
+    autoTradeEngine,
+    newsRadar,
+    decisionEngine,
+  });
+
+  // 8. Initialize Agent Manager
   const agentManager = new AgentManager(exchangeService, correlationTracker);
 
-  // 8. Create Express HTTP Application
+  // 9. Create Express HTTP Application
   const app = createApp({
     agentManager,
     exchangeService,
@@ -81,10 +93,10 @@ async function bootstrap() {
     assistantService,
     learningEngine,
     circuitBreaker,
-    autoTradeEngine,
     altcoinScannerService,
     earlyLeakScannerService,
     technicalAnalysisService,
+    chatAssistantService,
   });
 
   const server = http.createServer(app);

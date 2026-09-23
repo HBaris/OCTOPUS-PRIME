@@ -29,6 +29,7 @@ export class Office3DApp {
   private targetLookAt = new THREE.Vector3(0, 1, 1);
   private currentLookAt = new THREE.Vector3(0, 1, 1);
   private isDragging = false;
+  private dragMode: 'orbit' | 'pan' = 'orbit';
   private previousMousePosition = { x: 0, y: 0 };
   private spherical = { radius: 31, theta: 0, phi: Math.PI / 4 };
 
@@ -208,9 +209,17 @@ export class Office3DApp {
   private setupEventListeners(): void {
     const dom = this.renderer.domElement;
 
-    // 1. Mouse Drag Orbit Controls
+    // Suppress default browser context menu on 3D canvas so right click drag works cleanly
+    dom.addEventListener('contextmenu', (e) => e.preventDefault());
+
+    // 1. Mouse Drag Controls (Left-click: Orbit 360°, Right-click/Middle-click: Pan left/right/up/down)
     dom.addEventListener('mousedown', (e) => {
       this.isDragging = true;
+      if (e.button === 2 || e.button === 1 || e.shiftKey) {
+        this.dragMode = 'pan';
+      } else {
+        this.dragMode = 'orbit';
+      }
       this.previousMousePosition = { x: e.clientX, y: e.clientY };
     });
 
@@ -224,11 +233,34 @@ export class Office3DApp {
       const deltaX = e.clientX - this.previousMousePosition.x;
       const deltaY = e.clientY - this.previousMousePosition.y;
 
-      // Orbit camera rotation
-      this.spherical.theta -= deltaX * 0.005;
-      this.spherical.phi = Math.max(0.2, Math.min(Math.PI / 2.2, this.spherical.phi - deltaY * 0.005));
+      if (this.dragMode === 'orbit') {
+        // Orbit 360° camera rotation
+        this.spherical.theta -= deltaX * 0.005;
+        this.spherical.phi = Math.max(0.15, Math.min(Math.PI / 2.1, this.spherical.phi - deltaY * 0.005));
+        this.updateCameraFromSpherical();
+      } else if (this.dragMode === 'pan') {
+        // Free Pan (Left/Right & Forward/Backward on ground plane)
+        const forward = new THREE.Vector3();
+        this.camera.getWorldDirection(forward);
+        forward.y = 0;
+        forward.normalize();
 
-      this.updateCameraFromSpherical();
+        const right = new THREE.Vector3();
+        right.crossVectors(forward, new THREE.Vector3(0, 1, 0)).normalize();
+
+        const panSpeed = 0.035 * (this.spherical.radius / 30);
+        const moveRight = right.clone().multiplyScalar(-deltaX * panSpeed);
+        const moveForward = forward.clone().multiplyScalar(deltaY * panSpeed);
+
+        this.targetLookAt.add(moveRight).add(moveForward);
+
+        // Clamp targetLookAt within room bounds
+        this.targetLookAt.x = Math.max(-28, Math.min(28, this.targetLookAt.x));
+        this.targetLookAt.z = Math.max(-28, Math.min(28, this.targetLookAt.z));
+
+        this.updateCameraFromSpherical();
+      }
+
       this.previousMousePosition = { x: e.clientX, y: e.clientY };
     });
 
@@ -239,7 +271,47 @@ export class Office3DApp {
       this.updateCameraFromSpherical();
     }, { passive: false });
 
-    // 3. Raycast Click on Characters
+    // 3. Keyboard Navigation (W, A, S, D & Arrow Keys for free office roaming)
+    window.addEventListener('keydown', (e) => {
+      // Ignore navigation if user is typing into input fields
+      const activeEl = document.activeElement;
+      if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA')) {
+        return;
+      }
+
+      const forward = new THREE.Vector3();
+      this.camera.getWorldDirection(forward);
+      forward.y = 0;
+      forward.normalize();
+
+      const right = new THREE.Vector3();
+      right.crossVectors(forward, new THREE.Vector3(0, 1, 0)).normalize();
+
+      const step = 1.2;
+      let handled = false;
+
+      if (e.code === 'KeyW' || e.code === 'ArrowUp') {
+        this.targetLookAt.add(forward.clone().multiplyScalar(step));
+        handled = true;
+      } else if (e.code === 'KeyS' || e.code === 'ArrowDown') {
+        this.targetLookAt.add(forward.clone().multiplyScalar(-step));
+        handled = true;
+      } else if (e.code === 'KeyA' || e.code === 'ArrowLeft') {
+        this.targetLookAt.add(right.clone().multiplyScalar(-step));
+        handled = true;
+      } else if (e.code === 'KeyD' || e.code === 'ArrowRight') {
+        this.targetLookAt.add(right.clone().multiplyScalar(step));
+        handled = true;
+      }
+
+      if (handled) {
+        this.targetLookAt.x = Math.max(-28, Math.min(28, this.targetLookAt.x));
+        this.targetLookAt.z = Math.max(-28, Math.min(28, this.targetLookAt.z));
+        this.updateCameraFromSpherical();
+      }
+    });
+
+    // 4. Raycast Click on Characters
     dom.addEventListener('click', (e) => {
       const rect = dom.getBoundingClientRect();
       this.mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
@@ -259,13 +331,13 @@ export class Office3DApp {
             'Kahvemi tazeledim, analize devam ediyorum ☕',
           ];
           const q = wittyQuotes[Math.floor(Math.random() * wittyQuotes.length)];
-          char.say(q, 4500, '#38bdf8');
+          char.say(q, 5000, '#38bdf8');
           break;
         }
       }
     });
 
-    // 4. Window Resize Observer
+    // 5. Window Resize Observer
     window.addEventListener('resize', () => this.onResize());
   }
 

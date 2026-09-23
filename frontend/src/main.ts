@@ -1,7 +1,9 @@
 import { Office3DApp } from './three/Office3DApp.ts';
+import './services/proChartManager.ts';
 import './services/positionsChartManager.ts';
 import './services/activityLogManager.ts';
 import './services/roomOverlayManager.ts';
+import './services/chatAssistantManager.ts';
 
 // Initialize Three.js 3D Office Application
 new Office3DApp('game-container');
