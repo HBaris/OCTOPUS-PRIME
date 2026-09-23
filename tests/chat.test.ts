@@ -135,6 +135,21 @@ describe('ChatAssistantService & /api/chat Endpoints', () => {
     expect(circuitBreaker.getState().isHalted).toBe(false);
   });
 
+  test('should detect and execute close position intent via chat', async () => {
+    // 1. Open a test position
+    await exchangeService.executeOrder('BTC/USDT', 'BUY', 50);
+    const positionsBefore = await exchangeService.fetchPositions();
+    expect(positionsBefore.length).toBe(1);
+
+    // 2. Command close via chat: "çabuk şu emri kapat"
+    const response = await chatService.processUserMessage('çabuk şu emri kapat');
+    expect(response.actionTaken).toBe('CLOSE_ALL_POSITIONS');
+    expect(response.message.content).toContain('Acil Aksiyon Alındı');
+
+    const positionsAfter = await exchangeService.fetchPositions();
+    expect(positionsAfter.length).toBe(0);
+  });
+
   test('should detect and execute auto-trade toggle intent', async () => {
     expect(autoTradeEngine.isEnabled()).toBe(true);
 

@@ -183,6 +183,61 @@ export class ChatAssistantService {
   }> {
     const lower = text.toLowerCase();
 
+    // 0. Close Positions / Emergency Exit Intent ("çabuk şu emri kapat", "BTC pozisyonunu kapat", "tüm pozisyonları kapat")
+    if (
+      lower.includes('kapat') ||
+      lower.includes('sonlandır') ||
+      lower.includes('çık') ||
+      lower.includes('boşalt') ||
+      lower.includes('sat ve çık')
+    ) {
+      if (
+        lower.includes('emri') ||
+        lower.includes('emir') ||
+        lower.includes('pozisyon') ||
+        lower.includes('işlem') ||
+        lower.includes('hepsini') ||
+        lower.includes('tüm') ||
+        lower.includes('acil') ||
+        lower.includes('çabuk') ||
+        lower.includes('şu')
+      ) {
+        const positions = await this.exchangeService.fetchPositions();
+        if (!positions || positions.length === 0) {
+          return {
+            executed: true,
+            actionName: 'CLOSE_POSITION_NONE',
+            message: 'ℹ️ **Bilgi**: Kapatılacak aktif bir pozisyon bulunmuyor (Tüm kasa zaten nakitte).',
+          };
+        }
+
+        // Check if user specified a coin e.g. "BTC pozisyonunu kapat", "ETH kapat"
+        const knownSymbols = ['BTC', 'ETH', 'SOL', 'AVAX', 'NEAR', 'SUI', 'APT', 'ARB', 'OP', 'LINK', 'DOGE', 'PEPE', 'XRP', 'BNB'];
+        const matchedCoin = knownSymbols.find((c) => lower.includes(c.toLowerCase()));
+
+        if (matchedCoin) {
+          const targetSym = `${matchedCoin}/USDT`;
+          await this.exchangeService.closePosition(targetSym);
+          return {
+            executed: true,
+            actionName: `CLOSE_POSITION_${matchedCoin}`,
+            message: `⚡ **Acil Aksiyon Alındı**: **${targetSym}** pozisyonu anında kapatıldı ve teminat kasaya iade edildi.`,
+          };
+        } else {
+          // Close ALL positions
+          const closedCount = positions.length;
+          for (const pos of positions) {
+            await this.exchangeService.closePosition(pos.symbol);
+          }
+          return {
+            executed: true,
+            actionName: 'CLOSE_ALL_POSITIONS',
+            message: `🚨 **Acil Aksiyon Alındı**: Açık olan **${closedCount} adet pozisyonun tümü** anında kapatıldı ve tüm bakiye güvenli şekilde nakte çekildi.`,
+          };
+        }
+      }
+    }
+
     // 1. Change Market Regime
     if (lower.includes('rejimi') || lower.includes('rejim')) {
       if (lower.includes('bull') || lower.includes('boğa')) {
