@@ -244,9 +244,9 @@ export class ProChartManager {
     this.volumeSeries = this.chartApi.addSeries(HistogramSeries, {
       color: '#38bdf8',
       priceFormat: { type: 'volume' },
-      priceScaleId: '',
+      priceScaleId: 'volume',
     });
-    this.volumeSeries.priceScale().applyOptions({
+    this.chartApi.priceScale('volume').applyOptions({
       scaleMargins: {
         top: 0.8,
         bottom: 0,
@@ -277,7 +277,13 @@ export class ProChartManager {
       for (const entry of entries) {
         if (entry.target === this.containerEl) {
           const w = entry.contentRect.width;
-          if (w > 0) this.chartApi.applyOptions({ width: w });
+          const h = entry.contentRect.height;
+          if (w > 0) {
+            this.chartApi.applyOptions({
+              width: w,
+              height: h > 200 ? h : 480,
+            });
+          }
         }
       }
     });
@@ -387,6 +393,22 @@ export class ProChartManager {
       this.ma7Series.setData(ma7Data);
       this.ma25Series.setData(ma25Data);
       this.ma99Series.setData(ma99Data);
+
+      // Update Legend Indicators
+      const lastMa7 = ma7Data[ma7Data.length - 1]?.value;
+      const lastMa25 = ma25Data[ma25Data.length - 1]?.value;
+      const lastMa99 = ma99Data[ma99Data.length - 1]?.value;
+      const lastVol = formattedVol[formattedVol.length - 1]?.value;
+
+      const ma7El = document.getElementById('ma7-val');
+      const ma25El = document.getElementById('ma25-val');
+      const ma99El = document.getElementById('ma99-val');
+      const volEl = document.getElementById('vol-val');
+
+      if (ma7El && lastMa7) ma7El.textContent = `$${lastMa7 < 1 ? lastMa7.toFixed(5) : lastMa7.toFixed(2)}`;
+      if (ma25El && lastMa25) ma25El.textContent = `$${lastMa25 < 1 ? lastMa25.toFixed(5) : lastMa25.toFixed(2)}`;
+      if (ma99El && lastMa99) ma99El.textContent = `$${lastMa99 < 1 ? lastMa99.toFixed(5) : lastMa99.toFixed(2)}`;
+      if (volEl && lastVol) volEl.textContent = `${Math.round(lastVol).toLocaleString()}`;
 
       // Update Ticker Info
       const lastCandle = candles[candles.length - 1];
