@@ -355,18 +355,55 @@ export class ProChartManager {
   private async loadSymbolData(symbol: string, timeframe: string): Promise<void> {
     try {
       let candles = await apiService.fetchCandles(symbol, timeframe);
-      if (!candles || candles.length === 0) {
+      if (!candles || !Array.isArray(candles) || candles.length === 0) {
         candles = this.generateFallbackCandles(symbol);
       }
+
+      // Convert timestamp/time to integer seconds and validate
+      const validCandles = candles
+        .map((c: any) => {
+          let t = 0;
+          if (c.time !== undefined && !isNaN(Number(c.time))) {
+            t = Number(c.time);
+          } else if (c.timestamp !== undefined) {
+            const parsed = new Date(c.timestamp).getTime();
+            t = Math.floor(parsed / 1000);
+          }
+          if (isNaN(t) || t <= 0) {
+            t = Math.floor(Date.now() / 1000);
+          }
+          return {
+            time: t as Time,
+            open: Number(c.open),
+            high: Number(c.high),
+            low: Number(c.low),
+            close: Number(c.close),
+            volume: Number(c.volume || 1000),
+          };
+        })
+        .filter((c: any) => !isNaN(c.time) && !isNaN(c.open) && !isNaN(c.close))
+        .sort((a: any, b: any) => (a.time as number) - (b.time as number));
+
+      // Remove duplicate timestamps (strictly ascending required by Lightweight Charts)
+      const uniqueCandles: any[] = [];
+      const seenTimes = new Set<number>();
+      for (const c of validCandles) {
+        const tNum = Number(c.time);
+        if (!seenTimes.has(tNum)) {
+          seenTimes.add(tNum);
+          uniqueCandles.push(c);
+        }
+      }
+
+      if (uniqueCandles.length === 0) return;
 
       const formattedCandles: CandlestickData<Time>[] = [];
       const formattedVol: HistogramData<Time>[] = [];
       const closes: number[] = [];
 
-      for (const c of candles) {
-        const timeVal = (new Date(c.timestamp).getTime() / 1000) as Time;
+      for (const c of uniqueCandles) {
         formattedCandles.push({
-          time: timeVal,
+          time: c.time,
           open: c.open,
           high: c.high,
           low: c.low,
@@ -374,8 +411,8 @@ export class ProChartManager {
         });
 
         formattedVol.push({
-          time: timeVal,
-          value: c.volume || 1000,
+          time: c.time,
+          value: c.volume,
           color: c.close >= c.open ? 'rgba(16, 185, 129, 0.45)' : 'rgba(239, 68, 68, 0.45)',
         });
 
@@ -593,8 +630,8 @@ export class ProChartManager {
 
   private generateFallbackCandles(symbol: string): any[] {
     const candles: any[] = [];
-    const now = Date.now();
-    const intervalMs = 15 * 60 * 1000;
+    const nowSec = Math.floor(Date.now() / 1000);
+    const intervalSec = 15 * 60;
     const basePrice = symbol.includes('PEPE')
       ? 0.000009
       : symbol.includes('DOGE')
@@ -609,14 +646,14 @@ export class ProChartManager {
 
     let current = basePrice;
     for (let i = 50; i >= 0; i--) {
-      const ts = now - i * intervalMs;
+      const ts = nowSec - i * intervalSec;
       const variation = (Math.sin(i * 0.5) + (Math.random() - 0.48)) * (basePrice * 0.008);
       const open = current;
       const close = current + variation;
       const high = Math.max(open, close) + basePrice * 0.004;
       const low = Math.min(open, close) - basePrice * 0.004;
       candles.push({
-        timestamp: ts,
+        time: ts,
         open: Math.max(0.000001, open),
         high: Math.max(0.000001, high),
         low: Math.max(0.000001, low),
