@@ -2314,5 +2314,192 @@ body {
   min-height: 420px;
 }
 
+/* ==========================================================================
+   TRADE JOURNAL & DISTILLED LESSONS OVERLAY STYLES
+   ========================================================================== */
+
+.journal-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+}
+
+.journal-summary-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid #1e293b;
+  border-radius: 8px;
+  padding: 12px 16px;
+}
+
+.journal-metric {
+  flex: 1;
+  min-width: 130px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.journal-metric .lbl {
+  font-size: 11px;
+  color: #94a3b8;
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.journal-metric .val {
+  font-size: 16px;
+  font-weight: 700;
+  font-family: monospace;
+  color: #f8fafc;
+}
+
+.journal-split-body {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap: 16px;
+}
+
+@media (max-width: 1024px) {
+  .journal-split-body {
+    grid-template-columns: 1fr;
+  }
+}
+
+.journal-left-pane,
+.journal-right-pane {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid #1e293b;
+  border-radius: 8px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.journal-lessons-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 380px;
+  overflow-y: auto;
+}
+
+.lesson-card {
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-left: 4px solid #6366f1;
+  border-radius: 6px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.lesson-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+}
+
+.lesson-rate {
+  font-family: monospace;
+  font-size: 11px;
+  color: #cbd5e1;
+}
+
+.lesson-title {
+  margin: 0;
+  font-size: 13px;
+  color: #f1f5f9;
+  font-weight: 600;
+}
+
+.lesson-body {
+  margin: 0;
+  font-size: 12px;
+  color: #94a3b8;
+  line-height: 1.4;
+}
+
+.lesson-rule {
+  background: rgba(99, 102, 241, 0.1);
+  border-radius: 4px;
+  padding: 6px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.lesson-rule small {
+  color: #818cf8;
+  font-size: 10px;
+  text-transform: uppercase;
+}
+
+.lesson-rule b {
+  color: #e0e7ff;
+  font-size: 11px;
+  font-family: monospace;
+}
+
+.journal-table-wrapper {
+  overflow-x: auto;
+  max-height: 480px;
+  overflow-y: auto;
+}
+
+.journal-trades-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+  font-family: monospace;
+}
+
+.journal-trades-table th {
+  background: #1e293b;
+  color: #94a3b8;
+  text-align: left;
+  padding: 8px 10px;
+  font-weight: 600;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.journal-trades-table td {
+  padding: 7px 10px;
+  border-bottom: 1px solid #1e293b;
+  color: #cbd5e1;
+}
+
+.trade-win-row {
+  background: rgba(16, 185, 129, 0.04);
+}
+
+.trade-loss-row {
+  background: rgba(239, 68, 68, 0.04);
+}
+
+.lesson-snippet {
+  max-width: 220px;
+  color: #94a3b8 !important;
+}
+
+/* Live tape flash animation */
+@keyframes tradeFlash {
+  0% { background: rgba(56, 189, 248, 0.35); }
+  100% { background: transparent; }
+}
+
+.trade-flash {
+  animation: tradeFlash 0.8s ease-out;
+}
+
 
 

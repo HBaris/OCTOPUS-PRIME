@@ -2,7 +2,7 @@ import { APP_CONFIG } from '../config.ts';
 
 const API_URL = APP_CONFIG.REST_API_URL || 'http://localhost:3000/api';
 
-export type RoomId = 'scanner' | 'scalp' | 'intelligence' | 'technical' | 'news' | 'all';
+export type RoomId = 'scanner' | 'scalp' | 'intelligence' | 'technical' | 'news' | 'journal' | 'all';
 
 interface ChatMessage {
   sender: 'user' | 'chief';
@@ -29,7 +29,7 @@ export class RoomOverlayManager {
     scalp: [
       {
         sender: 'chief',
-        text: 'Emrindeyim Patron! 1000$ test bakiyesiyle mikro-kârları topluyorum. "çek", "durdur", "kaç para kazandık?" veya "hedef %1.5" diyebilirsin.',
+        text: 'Emrindeyim Patron! Dinamik trend ve momentum hedeflerini (%2.5+) takip eden stop ile kilitliyorum. "çek", "durdur", "kaç para kazandık?" veya "hedef %3" diyebilirsin.',
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         avatar: '⚡',
         chiefName: 'Baş Scalper',
@@ -60,6 +60,15 @@ export class RoomOverlayManager {
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         avatar: '📰',
         chiefName: 'Haber Şefi',
+      },
+    ],
+    journal: [
+      {
+        sender: 'chief',
+        text: 'Emrindeyim Kaptan! Yapılan tüm işlemleri kaydediyor, kârlı ve zararlı işlemlerden kalıcı strateji dersleri çıkarıyorum. Bilgi bankası 2-kademeli hibrit yapıda saklanır, GitHub sınırlarına takılmaz.',
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        avatar: '📚',
+        chiefName: 'Bilgi Bankası Danışmanı',
       },
     ],
   };
@@ -167,6 +176,11 @@ export class RoomOverlayManager {
         if (subtitleEl) subtitleEl.textContent = 'Birim Şefi: Haber Şefi | Flaş Gelişmeler & Makro Etki Analizleri';
         if (iconEl) iconEl.textContent = '📰';
         await this.renderNewsRoom(bodyEl, isPeriodicRefresh);
+      } else if (this.activeRoom === 'journal') {
+        if (titleEl) titleEl.textContent = '📚 İşlem Günlüğü & Öğrenilen Dersler';
+        if (subtitleEl) subtitleEl.textContent = 'Birim Şefi: Bilgi Bankası Danışmanı | 2-Kademeli Hibrit Öğrenme & Git-Korumalı Arşiv';
+        if (iconEl) iconEl.textContent = '📚';
+        await this.renderJournalRoom(bodyEl, isPeriodicRefresh);
       }
     } catch (err) {
       if (!isPeriodicRefresh) {
@@ -517,6 +531,144 @@ export class RoomOverlayManager {
     `;
 
     this.bindChiefChatEvents('news', 'Haber Şefi', '📰');
+  }
+
+  // --- 6. JOURNAL & DISTILLED LESSONS ROOM RENDERER ---
+  private async renderJournalRoom(container: HTMLElement, isPeriodic: boolean): Promise<void> {
+    const res = await fetch(`${API_URL}/learning/journal`).then((r) => r.json());
+    const perf = res.performanceSummary || {};
+    const lessons = res.distilledLessons || [];
+    const recentTrades = res.recentTrades || [];
+
+    // Lessons Cards
+    let lessonsHtml = '';
+    lessons.forEach((l: any) => {
+      lessonsHtml += `
+        <div class="lesson-card">
+          <div class="lesson-header">
+            <span class="pill pill-timing">${l.category}</span>
+            <span class="lesson-rate">Kazanma: <b class="text-green">%${l.winRate || 75}</b> (${l.supportingTradeCount || 0} İşlem)</span>
+          </div>
+          <h4 class="lesson-title">💡 ${l.title}</h4>
+          <p class="lesson-body">${l.lesson}</p>
+          <div class="lesson-rule">
+            <small>Uygulanan Stratejik Kural:</small>
+            <b>${l.actionableRule}</b>
+          </div>
+        </div>
+      `;
+    });
+
+    // Recent Trades Rows
+    let tradesHtml = '';
+    if (recentTrades.length === 0) {
+      tradesHtml = '<tr><td colspan="7" class="text-center" style="padding:16px;">Henüz tamamlanmış işlem kaydı yok. Otomatik trend ve momentum işlemleri tamamlandıkça buraya dökülecektir.</td></tr>';
+    } else {
+      recentTrades.forEach((t: any) => {
+        const isWin = (t.pnlUsd || 0) >= 0;
+        const durMin = Math.round((t.durationSec || 60) / 60);
+        tradesHtml += `
+          <tr class="${isWin ? 'trade-win-row' : 'trade-loss-row'}">
+            <td><b>${t.symbol}</b></td>
+            <td><span class="pill pill-${(t.side || 'LONG').toLowerCase()}">${t.side} ${t.leverage}x</span></td>
+            <td>$${Number(t.entryPrice).toFixed(4)}</td>
+            <td>$${Number(t.exitPrice || t.entryPrice).toFixed(4)}</td>
+            <td class="${isWin ? 'text-green' : 'text-red'} font-bold">
+              ${isWin ? '+' : ''}$${Number(t.pnlUsd || 0).toFixed(2)} (${isWin ? '+' : ''}${t.pnlPercent || 0}%)
+            </td>
+            <td><small>${durMin} dk (${t.exitReason || 'Kapanış'})</small></td>
+            <td class="lesson-snippet"><small>${t.lessonLearned || 'Ders çıkarılıyor...'}</small></td>
+          </tr>
+        `;
+      });
+    }
+
+    if (isPeriodic) {
+      const lessonsContainer = container.querySelector('.journal-lessons-grid');
+      const tableBody = container.querySelector('.journal-trades-tbody');
+      if (lessonsContainer) lessonsContainer.innerHTML = lessonsHtml;
+      if (tableBody) tableBody.innerHTML = tradesHtml;
+      return;
+    }
+
+    container.innerHTML = `
+      <div class="journal-layout">
+        <!-- Top Metrics Ribbon -->
+        <div class="journal-summary-strip">
+          <div class="journal-metric">
+            <span class="lbl">Toplam İşlem</span>
+            <span class="val">${perf.totalTrades || 0}</span>
+          </div>
+          <div class="journal-metric">
+            <span class="lbl">Kazanma Oranı</span>
+            <span class="val text-green">%${perf.winRatePercent || 0}</span>
+          </div>
+          <div class="journal-metric">
+            <span class="lbl">Net Kâr (PnL)</span>
+            <span class="val ${(perf.netPnlUsd || 0) >= 0 ? 'text-green' : 'text-red'} font-mono">
+              ${(perf.netPnlUsd || 0) >= 0 ? '+' : ''}$${Number(perf.netPnlUsd || 0).toFixed(2)}
+            </span>
+          </div>
+          <div class="journal-metric">
+            <span class="lbl">Kâr Faktörü</span>
+            <span class="val text-yellow">${perf.profitFactor || 1.0}</span>
+          </div>
+          <div class="journal-metric git-status-metric">
+            <span class="lbl">Bilgi Bankası & Git Durumu</span>
+            <span class="val text-blue">✅ 2-Kademeli Hibrit (Git-Safe)</span>
+          </div>
+        </div>
+
+        <div class="journal-split-body">
+          <!-- Left: Distilled Lessons -->
+          <div class="journal-left-pane">
+            <div class="section-hdr">
+              <h3>💡 Damıtılmış Stratejik Dersler (${lessons.length})</h3>
+              <small>Binlerce ham işlemden süzülen 20-30 KB'lık rafine tecrübe kuralları (Git uyumlu)</small>
+            </div>
+            <div class="journal-lessons-grid">
+              ${lessonsHtml}
+            </div>
+
+            <!-- Unit Chief Chat Section -->
+            ${this.getChiefChatHtml('journal', 'Bilgi Bankası Danışmanı', '📚', [
+              'En çok hangi coin kazandırdı?',
+              'Stop olma nedenlerimiz neler?',
+              'Bilgi bankası mimarisi nasıl çalışır?',
+              'Stratejimizi nasıl geliştirelim?',
+            ])}
+          </div>
+
+          <!-- Right: Past Trades Table -->
+          <div class="journal-right-pane">
+            <div class="section-hdr">
+              <h3>📋 Gerçekleşen İşlemler & Çıkarılan Ders Günlüğü</h3>
+              <small>Son ${recentTrades.length} işlemin icra, kâr/zarar ve anlık çıkarım raporu</small>
+            </div>
+            <div class="journal-table-wrapper">
+              <table class="journal-trades-table">
+                <thead>
+                  <tr>
+                    <th>Parite</th>
+                    <th>Yön</th>
+                    <th>Giriş</th>
+                    <th>Çıkış</th>
+                    <th>PnL</th>
+                    <th>Süre / Çıkış</th>
+                    <th>İşlemden Çıkarılan Ders</th>
+                  </tr>
+                </thead>
+                <tbody class="journal-trades-tbody">
+                  ${tradesHtml}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    this.bindChiefChatEvents('journal', 'Bilgi Bankası Danışmanı', '📚');
   }
 
   // --- CHIEF CHAT TEMPLATE & EVENT BINDINGS ---

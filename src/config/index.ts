@@ -71,11 +71,12 @@ const envSchema = z.object({
         .filter(Boolean)
     ),
 
-  // Autonomous Auto-Trading & Micro-Scalping (Passive Income Mode)
+  // Autonomous Trend & Momentum Trading Engine (Swing & Momentum Mode)
   AUTO_TRADING_ENABLED: z.preprocess((val) => val === undefined ? true : val === 'true' || val === true, z.boolean()).default(true),
-  MICRO_SCALP_TARGET_USD: z.coerce.number().positive().default(0.30), // $0.30 (30 Cents target profit per trade)
-  MICRO_SCALP_STOP_LOSS_USD: z.coerce.number().positive().default(0.60), // $0.60 stop loss defense
-  MICRO_SCALP_MARGIN_USD: z.coerce.number().positive().default(15.0), // $15.0 isolated margin per micro trade
+  AUTOTRADE_TARGET_PROFIT_PERCENT: z.coerce.number().positive().default(2.5), // %2.5 target profit per trade
+  AUTOTRADE_TRAILING_STOP_PERCENT: z.coerce.number().positive().default(0.8), // %0.8 trailing stop distance
+  AUTOTRADE_STOP_LOSS_PERCENT: z.coerce.number().positive().default(1.5), // %1.5 dynamic stop loss defense
+  AUTOTRADE_MARGIN_USD: z.coerce.number().positive().default(50.0), // $50.0 margin per trade
   MAX_CONCURRENT_POSITIONS: z.coerce.number().min(1).default(4),
   ALTCOIN_SCAN_INTERVAL_SEC: z.coerce.number().min(3).default(8),
   ALTCOIN_SYMBOLS: z

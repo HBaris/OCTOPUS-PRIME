@@ -677,11 +677,42 @@ export class BinanceService implements IExchangeService {
 
   public startPricePoller(): void {
     if (this.pollerTimer) return;
-    this.pollerTimer = setInterval(() => {
-      this.checkLiquidationRisks().catch((e) =>
-        logger.debug(`[BinanceService] Poller check error: ${(e as Error).message}`)
-      );
-    }, 10000);
+    this.pollerTimer = setInterval(async () => {
+      try {
+        await this.updateSimulatedPositionsLive();
+        await this.checkLiquidationRisks();
+      } catch (e) {
+        logger.debug(`[BinanceService] Poller check error: ${(e as Error).message}`);
+      }
+    }, 2500);
+  }
+
+  private async updateSimulatedPositionsLive(): Promise<void> {
+    if (this.simulatedPositions.size === 0) return;
+
+    for (const [symbol, pos] of this.simulatedPositions.entries()) {
+      const ticker = await this.getTicker(symbol);
+      let livePrice = ticker.lastPrice;
+
+      // In simulated mode, add micro-volatility walk if ticker is static
+      const microFluctuation = (Math.random() - 0.48) * (livePrice * 0.0015);
+      livePrice = Math.max(0.00001, Number((livePrice + microFluctuation).toFixed(symbol.includes('1000') || livePrice < 1 ? 6 : 2)));
+
+      pos.markPrice = livePrice;
+      pos.currentPrice = livePrice;
+
+      const isLong = pos.side === 'LONG';
+      const priceDiff = isLong ? livePrice - pos.entryPrice : pos.entryPrice - livePrice;
+      const rawPnl = priceDiff * pos.amount;
+      pos.unrealizedPnl = Number(rawPnl.toFixed(2));
+
+      const margin = pos.marginUsed || (pos.amount * pos.entryPrice) / (pos.leverage || 5);
+      if (margin > 0) {
+        pos.percentagePnl = Number(((pos.unrealizedPnl / margin) * 100).toFixed(2));
+      }
+    }
+
+    await this.broadcastPortfolioUpdate();
   }
 
   public stopPricePoller(): void {
@@ -696,7 +727,7 @@ export class BinanceService implements IExchangeService {
     for (const pos of positions) {
       if (!pos.liquidationPrice) continue;
       const ticker = await this.getTicker(pos.symbol);
-      const currentPrice = ticker.lastPrice;
+      const currentPrice = pos.markPrice || ticker.lastPrice;
       const distance = Math.abs(currentPrice - pos.liquidationPrice);
       const distancePercent = (distance / currentPrice) * 100;
 

@@ -1,8 +1,12 @@
 import { Router, Request, Response } from 'express';
 import { LearningEngine } from '../../services/learning/LearningEngine.js';
+import { TradeJournalService, tradeJournalService as defaultTradeJournalService } from '../../services/learning/TradeJournalService.js';
 import { z } from 'zod';
 
-export function createLearningRouter(learningEngine: LearningEngine): Router {
+export function createLearningRouter(
+  learningEngine: LearningEngine,
+  tradeJournalService: TradeJournalService = defaultTradeJournalService
+): Router {
   const router = Router();
 
   // GET /api/learning/rules
@@ -13,6 +17,33 @@ export function createLearningRouter(learningEngine: LearningEngine): Router {
       currentRegime: learningEngine.getMarketRegime(),
       count: rules.length,
       rules,
+    });
+  });
+
+  // GET /api/learning/journal (Trade Journal & Distilled Lessons)
+  router.get('/journal', (_req: Request, res: Response) => {
+    const distilled = tradeJournalService.getDistilledKnowledge();
+    const recentTrades = tradeJournalService.getRecentTrades(50);
+    const summary = tradeJournalService.getPerformanceSummary();
+
+    res.json({
+      success: true,
+      performanceSummary: summary,
+      distilledLessons: distilled.distilledLessons,
+      coinPerformance: distilled.coinPerformance,
+      regimePerformance: distilled.regimePerformance,
+      recentTrades,
+      lastDistilledAt: distilled.lastDistilledAt,
+    });
+  });
+
+  // POST /api/learning/distill (Force distillation update)
+  router.post('/distill', (_req: Request, res: Response) => {
+    const updated = tradeJournalService.distillLessons();
+    res.json({
+      success: true,
+      message: 'Knowledge distillation executed successfully.',
+      distilledKnowledge: updated,
     });
   });
 

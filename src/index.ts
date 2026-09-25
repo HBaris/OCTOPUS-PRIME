@@ -9,6 +9,7 @@ import { CorrelationTracker } from './services/correlation/CorrelationTracker.js
 import { FeedbackSystem } from './services/feedback/FeedbackSystem.js';
 import { LearningEngine } from './services/learning/LearningEngine.js';
 import { RuleStore } from './services/learning/RuleStore.js';
+import { tradeJournalService } from './services/learning/TradeJournalService.js';
 import { CircuitBreaker } from './services/risk/CircuitBreaker.js';
 import { DecisionEngine } from './services/decision/DecisionEngine.js';
 import { AssistantService } from './services/assistant/AssistantService.js';
@@ -65,13 +66,16 @@ async function bootstrap() {
   );
 
   // 6. Initialize Universal Altcoin Scanner & Smart Scalping Engine
-  const autoTradeEngine = new AutoTradeEngine(exchangeService, circuitBreaker);
+  const autoTradeEngine = new AutoTradeEngine(exchangeService, circuitBreaker, {
+    tradeJournalService,
+  });
   const altcoinScannerService = new AltcoinScannerService(exchangeService, decisionEngine);
 
   // 7. Initialize AI Chat Assistant Service (Conversational Brain Core)
   const chatAssistantService = new ChatAssistantService({
     learningEngine,
     ruleStore,
+    tradeJournalService,
     exchangeService,
     circuitBreaker,
     autoTradeEngine,

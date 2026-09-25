@@ -23,6 +23,14 @@ tests/test_*.json
 logs/
 *.log
 
+# Raw High-Volume Trade Telemetry (Ignored to prevent GitHub push limits & repository bloat)
+data/trade_history.json
+data/*.jsonl
+data/trades/
+data/archive/
+trade_history.json
+*.trade_history.json
+
 # IDE & OS
 .vscode/
 .idea/

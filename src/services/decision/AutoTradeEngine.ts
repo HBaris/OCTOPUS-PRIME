@@ -1,5 +1,6 @@
 import { IExchangeService } from '../exchange/IExchangeService.js';
 import { CircuitBreaker } from '../risk/CircuitBreaker.js';
+import { TradeJournalService, tradeJournalService as defaultTradeJournalService } from '../learning/TradeJournalService.js';
 import { eventBus } from '../../events/EventBus.js';
 import { EventType, AgentRole } from '../../config/constants.js';
 import { TradeProposalPayload } from '../../types/events.js';
@@ -37,6 +38,7 @@ export interface ExecutedOrderRecord {
 export class AutoTradeEngine {
   private exchangeService: IExchangeService;
   private circuitBreaker: CircuitBreaker;
+  private tradeJournalService: TradeJournalService;
   private isAutoTradingEnabled: boolean;
   private targetProfitPercent: number; // e.g. 0.8%
   private trailingStopPercent: number;  // e.g. 0.35%
@@ -62,15 +64,17 @@ export class AutoTradeEngine {
       stopLossPercent?: number;
       marginPerTradeUsd?: number;
       maxConcurrentPositions?: number;
+      tradeJournalService?: TradeJournalService;
     }
   ) {
     this.exchangeService = exchangeService;
     this.circuitBreaker = circuitBreaker;
+    this.tradeJournalService = options?.tradeJournalService || defaultTradeJournalService;
     this.isAutoTradingEnabled = options?.autoTradingEnabled ?? config.AUTO_TRADING_ENABLED;
-    this.targetProfitPercent = options?.targetProfitPercent ?? 0.8;
-    this.trailingStopPercent = options?.trailingStopPercent ?? 0.35;
-    this.stopLossPercent = options?.stopLossPercent ?? 1.2;
-    this.marginPerTradeUsd = options?.marginPerTradeUsd ?? config.MICRO_SCALP_MARGIN_USD;
+    this.targetProfitPercent = options?.targetProfitPercent ?? config.AUTOTRADE_TARGET_PROFIT_PERCENT;
+    this.trailingStopPercent = options?.trailingStopPercent ?? config.AUTOTRADE_TRAILING_STOP_PERCENT;
+    this.stopLossPercent = options?.stopLossPercent ?? config.AUTOTRADE_STOP_LOSS_PERCENT;
+    this.marginPerTradeUsd = options?.marginPerTradeUsd ?? config.AUTOTRADE_MARGIN_USD;
     this.maxConcurrentPositions = options?.maxConcurrentPositions ?? config.MAX_CONCURRENT_POSITIONS;
 
     this.stats = {
@@ -232,6 +236,14 @@ export class AutoTradeEngine {
       for (const pos of openPositions) {
         await this.exchangeService.closePosition(pos.symbol);
         this.highestProfitPercent.delete(pos.symbol);
+
+        this.tradeJournalService.recordTradeExit({
+          symbol: pos.symbol,
+          exitPrice: pos.markPrice || pos.entryPrice,
+          pnlUsd: pos.unrealizedPnl || 0,
+          exitReason: reason,
+        });
+
         closed++;
       }
 
@@ -393,6 +405,15 @@ export class AutoTradeEngine {
           } else {
             this.stats.stopLossExits += 1;
           }
+
+          // Record exit in trade journal & trigger knowledge distillation
+          this.tradeJournalService.recordTradeExit({
+            symbol: pos.symbol,
+            exitPrice: pos.markPrice || pos.entryPrice,
+            pnlUsd,
+            exitReason,
+            orderId: orderRec?.id,
+          });
 
           eventBus.publish(EventType.AGENT_ACTION, {
             agentRole: AgentRole.BINANCE_TRADER,

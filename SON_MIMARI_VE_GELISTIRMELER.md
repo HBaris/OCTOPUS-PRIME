@@ -1,14 +1,14 @@
-# 🐙 OCTOPUS PRIME - Sistem Mimarisi & Geliştirme Günlüğü
+﻿# 🐙 OCTOPUS PRIME - Sistem Mimarisi & Geliştirme Günlüğü
 
-Bu doküman, **Octopus Prime** projesinde gerçekleştirilen büyük mimari dönüşümü, 3 kanallı karar motorunu, borsa soyutlama katmanını, 3D Three.js ofis ortamını, 12 uzman ajan ekosistemini ve yeni eklenen **Otonom Pasif Gelir & Altcoin Mikro-Scalping Motorunu** detaylandırmaktadır.
+Bu doküman, **Octopus Prime** projesinde gerçekleştirilen büyük mimari dönüşümü, 3 kanallı karar motorunu, borsa soyutlama katmanını, 3D Three.js ofis ortamını, 12 uzman ajan ekosistemini ve yeni eklenen **Otonom Trend & Momentum İcra Motorunu** detaylandırmaktadır.
 
 ---
 
 ## 🌟 1. Genel Sistem Özeti ve Vizyon
 
-Octopus Prime; kripto para piyasalarında **Haber (Hızlı RSS/CryptoPanic)**, **Teknik Analiz (RSI, EMA9/21, Hacim Patlaması)** ve **Sosyal İstihbarat (Telegram/Threads)** kanallarını gerçek zamanlı sentezleyerek çalışan, 12 uzman yapay zeka ajanından oluşan otonom bir işlem ve pasif gelir platformudur.
+Octopus Prime; kripto para piyasalarında **Haber (Hızlı RSS/CryptoPanic)**, **Teknik Analiz (RSI, EMA9/21, Hacim Patlaması)** ve **Sosyal İstihbarat (Telegram/Threads)** kanallarını gerçek zamanlı sentezleyerek çalışan, 12 uzman yapay zeka ajanından oluşan otonom bir işlem ve portföy yönetim platformudur.
 
-Sistem; kullanıcının manuel müdahalesine gerek kalmadan piyasayı sürekli tarar, yüksek olasılıklı mikro-fırsatlara girer, **30 centlik ($0.30+) küçük kârları toplayarak (micro-scalping)** kasaya kilitler ve sermayeyi dinamik kaldıraç & devre kesicilerle korur.
+Sistem; piyasayı sürekli tarar, yüksek olasılıklı trend ve momentum fırsatlarına girer, **dinamik % kâr hedefleri (%2.5+) ve takip eden stop (trailing stop %0.8)** ile kârı maksimize eder, sermayeyi dinamik kaldıraç & devre kesicilerle korur.
 
 ```
                   ┌─────────────────────────────────────────────────────────┐
@@ -33,8 +33,8 @@ Sistem; kullanıcının manuel müdahalesine gerek kalmadan piyasayı sürekli t
                                                │
                                  ┌─────────────┴─────────────┐
                                  ▼                           ▼
-                     [IExchangeService]            [Micro-Profit Harvester]
-                   (Binance / OKX Demo)             (+$0.30 Kârda Otomatik Çıkış)
+                     [IExchangeService]            [Dynamic Momentum Harvester]
+                   (Binance / OKX Demo)             (%2.5+ Hedef Kar & Trailing Stop)
 ```
 
 ---
@@ -68,16 +68,16 @@ Farklı borsalarla (Binance Testnet/Sandbox, OKX Demo Trading V5 API) standart b
 
 ---
 
-### 2.3. Otonom Pasif Gelir & Altcoin Mikro-Scalping Motoru (YENİ)
-Kullanıcının *"işlemleri bana sormadan yap, altcoinlerden 30 cent kasıp çıksın"* talebi doğrultusunda geliştirilen otonom icra sistemi:
+### 2.3. Otonom Trend & Momentum İcra Motoru
+Gerçekçi ve sürdürülebilir kârlılık stratejisi doğrultusunda geliştirilen profesyonel otonom icra sistemi:
 1. **`AutoTradeEngine.ts`**:
    - `TRADE_PROPOSAL` oluştuğunda insan onayı beklemeden emri borsaya iletir (`AUTO_TRADING_ENABLED = true`).
-   - Pozisyon başına `$15.00` izole marjin bağlar. Eşzamanlı en fazla `4` farklı altcoin pozisyonu açarak riski dağıtır.
-   - **Micro-Profit Harvester**: Her 2.5 saniyede bir açık pozisyonları denetler. Pozisyon kârı `+$0.30` USDT (30 Cent) seviyesine ulaştığı anda piyasa emriyle pozisyonu kapatır ve kârı kasaya ekler.
-   - Zarar durdurma eşiğinde (`-$0.60`) sermayeyi korumak için koruyucu çıkış yapar.
+   - Pozisyon başına `$50.00` izole marjin bağlar (`AUTOTRADE_MARGIN_USD`). Eşzamanlı en fazla `4` farklı pozisyon açarak riski dağıtır.
+   - **Dynamic % Profit Harvester & Trailing Stop**: Pozisyon kârı dinamik olarak takip edilir. Kâr %2.5 hedef seviyesine ulaştığında peşine %0.8 mesafeli takip eden stop takılır; trend devam ettiği sürece pozisyon açık kalır, geri çekilmede kâr kilitlenir.
+   - Dinamik zarar durdurma eşiğinde (`-%1.5`) sermayeyi korumak için koruyucu çıkış yapar.
 2. **`AltcoinScannerService.ts`**:
-   - 12 volatil altcoini (`DOGE`, `PEPE`, `AVAX`, `LINK`, `SUI`, `NEAR`, `ARB`, `OP`, `APT`, `XRP`, `SOL`, `BNB`) sürekli tarar.
-   - RSI < 30 aşırı satım veya RSI > 70 aşırı alım + EMA kesişimlerinde anlık mikro-fırsat sinyalleri üretir.
+   - 12+ yüksek hacimli ve volatil kripto varlığı sürekli tarar.
+   - RSI < 30 aşırı satım veya RSI > 70 aşırı alım + EMA kesişimlerinde trend/momentum teyitli sinyaller üretir.
 
 ---
 
@@ -111,10 +111,10 @@ Coin analistleri kaldırılarak sistem 12 uzman role indirgenmiş ve tüm coinle
 ### 2.6. Canlı Cüzdan Barı & Ajan/İşlem Günlüğü (Activity Log Feed)
 - **Üst Durum Barı**:
   - Canlı Bakiye (`$10,000.00`), Boş Teminat, Gerçekleşen/Açık PnL, Risk Durumu.
-  - Borsa bağlantı nabzı (`🟢 ONLINE`) ve `🤖 OTO-TRADE: AKTİF ($0.30)` kontrolü.
+  - Borsa bağlantı nabzı (`🟢 ONLINE`) ve `🤖 OTO-TRADE: AKTİF (%2.5)` kontrolü.
 - **Canlı Log Çekmecesi (`ActivityLogManager`)**:
   - `Tümü`, `İşlemler`, `Sinyaller`, `Yönetim & Patron`, `Haber & Makro`, `Risk & Limit`, `Sistem` sekmeleri.
-  - Saniye saniye gerçekleşen tüm alım/satımlar, sinyaller ve 30 centlik kâr alma olayları filtrelenebilir, aranabilir ve JSON olarak dışa aktarılabilir.
+  - Saniye saniye gerçekleşen tüm alım/satımlar, sinyaller ve dinamik kâr alma olayları filtrelenebilir, aranabilir ve JSON olarak dışa aktarılabilir.
 
 ---
 
@@ -125,12 +125,13 @@ Coin analistleri kaldırılarak sistem 12 uzman role indirgenmiş ve tüm coinle
 | `EXCHANGE_PROVIDER` | `binance` | Kullanılacak borsa (`binance` veya `okx`) |
 | `BINANCE_TESTNET` | `true` | Binance Testnet Sandbox modu |
 | `AUTO_TRADING_ENABLED` | `true` | Kullanıcıya sormadan otonom işlem modu |
-| `MICRO_SCALP_TARGET_USD` | `0.30` | İşlem başına kâr alma hedefi ($0.30 USDT) |
-| `MICRO_SCALP_STOP_LOSS_USD` | `0.60` | İşlem başına stop-loss koruması |
-| `MICRO_SCALP_MARGIN_USD` | `15.0` | Mikro işlem başına bağlanacak teminat |
-| `MAX_CONCURRENT_POSITIONS` | `4` | Maksimum eşzamanlı açık altcoin pozisyonu |
+| `AUTOTRADE_TARGET_PROFIT_PERCENT` | `2.5` | İşlem başına hedef kâr oranı (%2.5) |
+| `AUTOTRADE_TRAILING_STOP_PERCENT` | `0.8` | Takip eden stop mesafesi (%0.8) |
+| `AUTOTRADE_STOP_LOSS_PERCENT` | `1.5` | Dinamik zarar kes stop-loss oranı (%1.5) |
+| `AUTOTRADE_MARGIN_USD` | `50.0` | İşlem başına bağlanacak teminat ($50.0 USDT) |
+| `MAX_CONCURRENT_POSITIONS` | `4` | Maksimum eşzamanlı açık pozisyon |
 | `MAX_LEVERAGE_ALLOWED` | `10` | İzin verilen maksimum kaldıraç |
-| `ALTCOIN_SCAN_INTERVAL_SEC`| `8` | Altcoin tarama döngü sıklığı (saniye) |
+| `ALTCOIN_SCAN_INTERVAL_SEC`| `8` | Varlık tarama döngü sıklığı (saniye) |
 
 ---
 
@@ -140,3 +141,4 @@ Coin analistleri kaldırılarak sistem 12 uzman role indirgenmiş ve tüm coinle
 - **Canlı Portlar**:
   - REST API & WebSocket: `http://localhost:3000` & `ws://localhost:3000/ws`
   - 3D Frontend: `http://localhost:5173`
+

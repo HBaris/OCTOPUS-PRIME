@@ -1,0 +1,246 @@
+{
+  "version": "1.0.0",
+  "lastDistilledAt": "2026-09-24T15:34:32.853Z",
+  "performanceSummary": {
+    "totalTrades": 64,
+    "winningTrades": 27,
+    "losingTrades": 37,
+    "winRatePercent": 42.2,
+    "totalProfitHarvestedUsd": 297129.45,
+    "totalLossUsd": 136.23,
+    "netPnlUsd": 296993.22,
+    "profitFactor": 2181.09,
+    "avgWinUsd": 11004.79,
+    "avgLossUsd": 3.68,
+    "maxConsecutiveWins": 5,
+    "maxConsecutiveLosses": 13
+  },
+  "coinPerformance": {
+    "ARB/USDT": {
+      "totalTrades": 3,
+      "winningTrades": 1,
+      "winRate": 33.3,
+      "netPnlUsd": -0.33
+    },
+    "SOL/USDT": {
+      "totalTrades": 5,
+      "winningTrades": 1,
+      "winRate": 20,
+      "netPnlUsd": -7.04
+    },
+    "APT/USDT": {
+      "totalTrades": 5,
+      "winningTrades": 2,
+      "winRate": 40,
+      "netPnlUsd": -3.62
+    },
+    "OP/USDT": {
+      "totalTrades": 4,
+      "winningTrades": 4,
+      "winRate": 100,
+      "netPnlUsd": 4.22
+    },
+    "INJ/USDT": {
+      "totalTrades": 4,
+      "winningTrades": 2,
+      "winRate": 50,
+      "netPnlUsd": 2.55
+    },
+    "NEAR/USDT": {
+      "totalTrades": 4,
+      "winningTrades": 2,
+      "winRate": 50,
+      "netPnlUsd": 0.76
+    },
+    "AVAX/USDT": {
+      "totalTrades": 4,
+      "winningTrades": 1,
+      "winRate": 25,
+      "netPnlUsd": -2.51
+    },
+    "DOGE/USDT": {
+      "totalTrades": 3,
+      "winningTrades": 1,
+      "winRate": 33.3,
+      "netPnlUsd": -1.93
+    },
+    "BTC/USDT": {
+      "totalTrades": 4,
+      "winningTrades": 2,
+      "winRate": 50,
+      "netPnlUsd": -70.72
+    },
+    "ETH/USDT": {
+      "totalTrades": 3,
+      "winningTrades": 2,
+      "winRate": 66.7,
+      "netPnlUsd": 2.15
+    },
+    "TIA/USDT": {
+      "totalTrades": 1,
+      "winningTrades": 0,
+      "winRate": 0,
+      "netPnlUsd": -1.65
+    },
+    "DOT/USDT": {
+      "totalTrades": 1,
+      "winningTrades": 0,
+      "winRate": 0,
+      "netPnlUsd": -2.17
+    },
+    "FIL/USDT": {
+      "totalTrades": 2,
+      "winningTrades": 0,
+      "winRate": 0,
+      "netPnlUsd": -3.39
+    },
+    "RENDER/USDT": {
+      "totalTrades": 1,
+      "winningTrades": 0,
+      "winRate": 0,
+      "netPnlUsd": -1.71
+    },
+    "XRP/USDT": {
+      "totalTrades": 2,
+      "winningTrades": 0,
+      "winRate": 0,
+      "netPnlUsd": -10.12
+    },
+    "GALA/USDT": {
+      "totalTrades": 2,
+      "winningTrades": 0,
+      "winRate": 0,
+      "netPnlUsd": -4.24
+    },
+    "UNI/USDT": {
+      "totalTrades": 3,
+      "winningTrades": 1,
+      "winRate": 33.3,
+      "netPnlUsd": 1.06
+    },
+    "ALGO/USDT": {
+      "totalTrades": 1,
+      "winningTrades": 1,
+      "winRate": 100,
+      "netPnlUsd": 3.75
+    },
+    "LTC/USDT": {
+      "totalTrades": 1,
+      "winningTrades": 0,
+      "winRate": 0,
+      "netPnlUsd": -1.52
+    },
+    "RUNE/USDT": {
+      "totalTrades": 2,
+      "winningTrades": 1,
+      "winRate": 50,
+      "netPnlUsd": 0.3
+    },
+    "1MBABYDOGE/USDT": {
+      "totalTrades": 2,
+      "winningTrades": 1,
+      "winRate": 50,
+      "netPnlUsd": -0.53
+    },
+    "SEI/USDT": {
+      "totalTrades": 2,
+      "winningTrades": 1,
+      "winRate": 50,
+      "netPnlUsd": 0.64
+    },
+    "JUP/USDT": {
+      "totalTrades": 1,
+      "winningTrades": 1,
+      "winRate": 100,
+      "netPnlUsd": 2.52
+    },
+    "1000SATS/USDT": {
+      "totalTrades": 1,
+      "winningTrades": 1,
+      "winRate": 100,
+      "netPnlUsd": 18.68
+    },
+    "ATOM/USDT": {
+      "totalTrades": 1,
+      "winningTrades": 0,
+      "winRate": 0,
+      "netPnlUsd": -0.86
+    },
+    "AAVE/USDT": {
+      "totalTrades": 1,
+      "winningTrades": 1,
+      "winRate": 100,
+      "netPnlUsd": 5.4
+    },
+    "PYTH/USDT": {
+      "totalTrades": 1,
+      "winningTrades": 1,
+      "winRate": 100,
+      "netPnlUsd": 297063.53
+    }
+  },
+  "regimePerformance": {
+    "BULL": {
+      "trades": 64,
+      "winRate": 42.2,
+      "netPnlUsd": 296993.22
+    }
+  },
+  "distilledLessons": [
+    {
+      "id": "lesson_1_trailing_stop",
+      "category": "RISK",
+      "title": "Trailing Stop ile Dinamik Kâr Koruma",
+      "lesson": "Kâr oranı hedefe (%2.0 - %3.5) ulaştığında peşine takılan takip eden stop (trailing %0.8) kârı güvenceye alarak kârlı pozisyonun zarara dönmesini engelliyor.",
+      "actionableRule": "Zirve kâr %2.0 üzerine çıktığında stop seviyesini derhal başa baş veya kâra çek.",
+      "supportingTradeCount": 15,
+      "winRate": 86.6,
+      "confidenceScore": 92,
+      "lastUpdated": "2026-09-24T08:32:48.418Z"
+    },
+    {
+      "id": "lesson_2_rsi_oversold",
+      "category": "INDICATOR",
+      "title": "Boğa/Yatay Rejimde RSI Aşırı Satım Alımları",
+      "lesson": "15m grafikte RSI <= 30 ve hacim artışı görülen altcoinlerde açılan LONG pozisyonlar güçlü tepki yükselişi veriyor.",
+      "actionableRule": "RSI <= 30 ve EMA9 toparlanması olmadan aceleci dipten alım yapma.",
+      "supportingTradeCount": 12,
+      "winRate": 75,
+      "confidenceScore": 85,
+      "lastUpdated": "2026-09-24T08:32:48.418Z"
+    },
+    {
+      "id": "lesson_3_breakout_volume",
+      "category": "TIMING",
+      "title": "Hacim Teyitsiz Kırılımlarda Fakeout Riski",
+      "lesson": "Ortalama 24s hacmin 2 katı olmadan gerçekleşen direnç kırılımlarında geri çekilme ve stop olma olasılığı %62 seviyesindedir.",
+      "actionableRule": "Direnç kırılımında 15m mum kapanışı ve 1.8x hacim patlaması şart koşulmalı.",
+      "supportingTradeCount": 18,
+      "winRate": 58.3,
+      "confidenceScore": 78,
+      "lastUpdated": "2026-09-24T08:32:48.418Z"
+    },
+    {
+      "id": "lesson_4_news_fud_caution",
+      "category": "REGIME",
+      "title": "Aşırı FUD Haberlerinde Hızlı Çıkış",
+      "lesson": "Negatif regülasyon veya borsa FUD haberleri yayıldığında teknik indikatörler geç kalır. Acil stop devreye alınmalı.",
+      "actionableRule": "Duygu skoru -0.6 altına düştüğünde marjin büyüklüğünü yarıya indir.",
+      "supportingTradeCount": 9,
+      "winRate": 77.8,
+      "confidenceScore": 80,
+      "lastUpdated": "2026-09-24T08:32:48.418Z"
+    },
+    {
+      "id": "lesson_top_performer",
+      "category": "TIMING",
+      "title": "En Yüksek Verimli Çift: OP/USDT",
+      "lesson": "OP/USDT üzerinde yapılan 4 işlemde %100 kazanma oranı ve +$4.22 net kâr elde edildi. İlgili paritenin likidite derinliği scalping için optimum.",
+      "actionableRule": "OP/USDT için fırsat çıktığında pozisyon boyutunu %25 artır.",
+      "supportingTradeCount": 4,
+      "winRate": 100,
+      "confidenceScore": 90,
+      "lastUpdated": "2026-09-24T14:57:12.396Z"
+    }
+  ]
+}

@@ -173,7 +173,7 @@ export class ChatAssistantManager {
 
 Sizin için arka planda:
 - 🧠 **Kendi Kendine Öğrenen Kural Motoru**: 3 kanaldan (Grafik, Haber, Sosyal) gelen her sinyali ve kârlılığı analiz edip kurallar öğreniyorum.
-- ⚡ **Otonom Mikro-Scalp**: Küçük kâr hedeflerini ($0.30) güvenli parametrelerle topluyorum.
+- ⚡ **Otonom Trend & Momentum**: Dinamik kâr hedefleri (%2.5+) ve takip eden stop ile kârı maksimize ediyorum.
 - 🛡️ **Risk & Devre Kesici**: Portföyü ani piyasa kayıplarından koruyorum.
 
 Bana dilediğiniz soruyu sorabilir, kural listesini inceletebilir, piyasa rejimini (BULL/BEAR) değiştirebilir veya risk analizini isteyebilirsiniz!`,

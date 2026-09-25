@@ -1,5 +1,6 @@
 import { LearningEngine } from '../learning/LearningEngine.js';
 import { RuleStore } from '../learning/RuleStore.js';
+import { TradeJournalService, tradeJournalService as defaultTradeJournalService } from '../learning/TradeJournalService.js';
 import { IExchangeService } from '../exchange/IExchangeService.js';
 import { CircuitBreaker } from '../risk/CircuitBreaker.js';
 import { AutoTradeEngine } from '../decision/AutoTradeEngine.js';
@@ -33,6 +34,7 @@ export interface ChatResponse {
 export class ChatAssistantService {
   private learningEngine: LearningEngine;
   private ruleStore: RuleStore;
+  private tradeJournalService: TradeJournalService;
   private exchangeService: IExchangeService;
   private circuitBreaker: CircuitBreaker;
   private autoTradeEngine?: AutoTradeEngine;
@@ -44,6 +46,7 @@ export class ChatAssistantService {
   constructor(dependencies: {
     learningEngine: LearningEngine;
     ruleStore?: RuleStore;
+    tradeJournalService?: TradeJournalService;
     exchangeService: IExchangeService;
     circuitBreaker: CircuitBreaker;
     autoTradeEngine?: AutoTradeEngine;
@@ -52,6 +55,7 @@ export class ChatAssistantService {
   }) {
     this.learningEngine = dependencies.learningEngine;
     this.ruleStore = dependencies.ruleStore || new RuleStore('rules.json');
+    this.tradeJournalService = dependencies.tradeJournalService || defaultTradeJournalService;
     this.exchangeService = dependencies.exchangeService;
     this.circuitBreaker = dependencies.circuitBreaker;
     this.autoTradeEngine = dependencies.autoTradeEngine;
@@ -167,7 +171,7 @@ export class ChatAssistantService {
     return [
       `📊 Öğrendiğin kuralları ve başarı oranlarını açıkla (${strongCount} Güçlü Kural)`,
       `⚡ Şu anki piyasa rejimi (${regime}) ve açık pozisyonlarımız ne durumda?`,
-      `🛡️ Risk seviyemiz, devre kesici ve mikro-scalp hedeflerimiz nasıl?`,
+      `🛡️ Risk seviyemiz, devre kesici ve otonom kâr hedeflerimiz nasıl?`,
       `🎯 Yeni bir kural hipotezi nasıl eklenir veya test edilir?`,
       `📈 Son sinyaller ve piyasa duygu analizini özetle`,
     ];
@@ -289,7 +293,7 @@ export class ChatAssistantService {
           return {
             executed: true,
             actionName: 'DISABLE_AUTOTRADE',
-            message: '🛑 **Aksiyon Alındı**: Otonom mikro-scalping motoru **DURDURULDU**.',
+            message: '🛑 **Aksiyon Alındı**: Otonom işlem motoru **DURDURULDU**.',
           };
         }
       } else if (lower.includes('başlat') || lower.includes('aç') || lower.includes('aktif')) {
@@ -298,7 +302,7 @@ export class ChatAssistantService {
           return {
             executed: true,
             actionName: 'ENABLE_AUTOTRADE',
-            message: '🚀 **Aksiyon Alındı**: Otonom mikro-scalping motoru **AKTİF** edildi ($0.30 hedef kâr).',
+            message: `🚀 **Aksiyon Alındı**: Otonom işlem motoru **AKTİF** edildi (%${config.AUTOTRADE_TARGET_PROFIT_PERCENT} hedef kâr + %${config.AUTOTRADE_TRAILING_STOP_PERCENT} trailing stop).`,
           };
         }
       }
@@ -361,6 +365,36 @@ export class ChatAssistantService {
       )
       .join('\n');
 
+    // Retrieve Distilled Knowledge and Recent Trades
+    const distilled = this.tradeJournalService.getDistilledKnowledge();
+    const recentTrades = this.tradeJournalService.getRecentTrades(6);
+    const perf = distilled.performanceSummary;
+
+    const recentTradesFormatted =
+      recentTrades.length === 0
+        ? 'Henüz tamamlanmış geçmiş işlem kaydı yok (Sistem ilk fırsatları bekliyor).'
+        : recentTrades
+            .map(
+              (t) =>
+                `- **${t.symbol}** (${t.side} ${t.leverage}x): Giriş=$${t.entryPrice.toFixed(2)}, Çıkış=$${(t.exitPrice || t.entryPrice).toFixed(2)}, PnL=${(t.pnlUsd || 0) >= 0 ? '+' : ''}$${(t.pnlUsd || 0).toFixed(2)} (${(t.pnlPercent || 0).toFixed(1)}%), Sebep: ${t.exitReason || 'Kapanış'}${t.lessonLearned ? `\n  💡 Ders: ${t.lessonLearned}` : ''}`
+            )
+            .join('\n');
+
+    const lessonsFormatted =
+      distilled.distilledLessons.length === 0
+        ? 'Henüz damıtılmış ders bulunmuyor.'
+        : distilled.distilledLessons
+            .map(
+              (l) =>
+                `- [${l.category}] **${l.title}**: ${l.lesson}\n  🎯 *Uygulanan İlke*: ${l.actionableRule} (Başarı: %${l.winRate.toFixed(1)}, ${l.supportingTradeCount} İşlem)`
+            )
+            .join('\n');
+
+    const coinPerfFormatted = Object.entries(distilled.coinPerformance)
+      .slice(0, 5)
+      .map(([sym, c]) => `${sym}: ${c.totalTrades} işlem (%${c.winRate} Başarı, Net: ${c.netPnlUsd >= 0 ? '+' : ''}$${c.netPnlUsd})`)
+      .join(' | ');
+
     return `
 === OCTOPUS PRIME CANLI SİSTEM TELEMETRİSİ & BELLEĞİ ===
 - Zaman: ${new Date().toLocaleString('tr-TR')}
@@ -368,9 +402,20 @@ export class ChatAssistantService {
 - Toplam Gerçekleşmemiş PnL: $${totalUnrealizedPnl.toFixed(2)}
 - Aktif Piyasa Rejimi: ${regime} (Boğa/Ayı/Yatay)
 - Devre Kesici (Risk): ${cbState.isHalted ? `🚨 SOĞUMA MODUNDA (Kalan: ${Math.round(cbState.remainingSeconds / 60)} dk)` : `🟢 NORMAL (Ardışık Kayıp: ${cbState.consecutiveLosses}/${config.COOLDOWN_CONSECUTIVE_LOSSES})`}
-- Otonom Mikro-Scalp Motoru: ${autoTradeEnabled ? `AKTİF (Hedef: $${config.MICRO_SCALP_TARGET_USD}/işlem, Marjin: $${config.MICRO_SCALP_MARGIN_USD})` : 'PASİF'}
+- Otonom İşlem Motoru: ${autoTradeEnabled ? `AKTİF (Hedef: %${config.AUTOTRADE_TARGET_PROFIT_PERCENT} kâr, Takip Stopu: %${config.AUTOTRADE_TRAILING_STOP_PERCENT}, Marjin: $${config.AUTOTRADE_MARGIN_USD})` : 'PASİF'}
 
-=== ÖĞRENİLEN STRATEJİ KURALLARI (${rules.length} Toplam) ===
+=== GEÇMİŞ İŞLEM PERFORMANSI & İSTATİSTİKLER ===
+- Toplam İşlem: ${perf.totalTrades} (${perf.winningTrades} Kazanç / ${perf.losingTrades} Kayıp)
+- Başarı Oranı: %${perf.winRatePercent} | Kâr Faktörü: ${perf.profitFactor} | Net Kâr: ${perf.netPnlUsd >= 0 ? '+' : ''}$${perf.netPnlUsd}
+- Parite Verimliliği: ${coinPerfFormatted || 'Veri toplanıyor'}
+
+=== SON YAPILAN İŞLEMLER (GEÇMİŞ İŞLEM GÜNLÜĞÜ) ===
+${recentTradesFormatted}
+
+=== DİSTİLE EDİLMİŞ STRATEJİK DERSLER BİLGİ BANKASI ===
+${lessonsFormatted}
+
+=== ÖĞRENİLEN SİNYAL KURALLARI (${rules.length} Toplam) ===
 - Güçlü Kurallar: ${strongRules.length} adet
 - Zayıf Kurallar: ${weakRules.length} adet
 - Test Aşamasındaki Hipotezler: ${hypotheses.length} adet
@@ -636,6 +681,72 @@ Kaptan, öğrendiğim tüm tecrübeler ve sistem verileri disk üzerinde şu dos
 💡 *Sistem her işlem kapandığında \`recordObservation\` ile \`rules.json\` dosyasını anında günceller; böylece sunucu yeniden başlasa bile öğrendiklerini asla unutmaz.*`;
     }
 
+    // 1.5. Inquiries about past trades, lessons learned, trade journal, or knowledge base bloat/git
+    if (
+      lower.includes('eski işlem') ||
+      lower.includes('geçmiş işlem') ||
+      lower.includes('yapılan işlem') ||
+      lower.includes('neler öğrendin') ||
+      lower.includes('ders çıkar') ||
+      lower.includes('ders') ||
+      lower.includes('bilgi bankası') ||
+      lower.includes('şişme') ||
+      lower.includes('push') ||
+      lower.includes('git')
+    ) {
+      const distilled = this.tradeJournalService.getDistilledKnowledge();
+      const recent = this.tradeJournalService.getRecentTrades(4);
+      const perf = distilled.performanceSummary;
+
+      let recentText = '';
+      if (recent.length > 0) {
+        recentText = recent
+          .map(
+            (t) =>
+              `• **${t.symbol}** (${t.side}): Giriş $${t.entryPrice.toFixed(2)} ➔ Çıkış $${(t.exitPrice || t.entryPrice).toFixed(2)} | PnL: **${(t.pnlUsd || 0) >= 0 ? '+' : ''}$${(t.pnlUsd || 0).toFixed(2)}**\n  *Sebep*: ${t.exitReason || 'Kapanış'}${t.lessonLearned ? `\n  *Çıkarılan Ders*: ${t.lessonLearned}` : ''}`
+          )
+          .join('\n');
+      } else {
+        recentText = '• Henüz tamamlanmış işlem kaydı bulunmuyor. Yeni işlemler açılıp kapandıkça günlüğe işlenecektir.';
+      }
+
+      let lessonsText = distilled.distilledLessons
+        .slice(0, 3)
+        .map(
+          (l) =>
+            `• 📌 **${l.title}**: ${l.lesson}\n  ↳ *Uygulanan Stratejik Kural*: ${l.actionableRule} (%${l.winRate.toFixed(1)} Başarı)`
+        )
+        .join('\n');
+
+      return `📚 **İşlem Günlüğü, Çıkarılan Dersler ve Bilgi Bankası Mimarisi**
+
+Kaptan, haklısınız: Sistem sadece sohbetleri değil, **yapılan tüm işlemleri ve bunlardan çıkarılan dersleri** de hafızasında tutmak zorundadır. Ancak binlerce işlemin ham verisi birikirse disk şişer ve GitHub'a push ederken 100MB sınırına takılıp hata alırsınız. Bu sorunu **2 Kademeli Hibrit Mimari** ile çözdük:
+
+---
+
+### 1. 🛡️ Kademe 1: Ham İşlem Günlüğü (\`data/trade_history.json\`)
+- **İçerik**: Açılan her emrin milisaniyelik zaman damgaları, giriş/çıkış fiyatları, indikatör durumları ve PnL değerleri.
+- **GitHub Koruması**: Bu dosya \`.gitignore\` içerisine eklendi. **Asla GitHub'ı şişirmez**, yerel sunucunuzda güvenle kalır. 3000 işlemi aştığında otomatik olarak arşive aktarılır.
+
+### 2. 💎 Kademe 2: Rafine Bilgi Bankası (\`distilled_lessons.json\` & \`rules.json\`)
+- **İçerik**: Yapılan tüm işlemlerden damıtılan **özet dersler, kazanma oranları, en kârlı coinler ve kurallar**.
+- **Boyut**: Yalnızca **15-30 KB**!
+- **GitHub Uyumu**: Çok hafif olduğu için Git ile versiyonlanır ve GitHub'a anında push edilebilir.
+
+---
+
+### 📊 Güncel İcra Özeti:
+- **Toplam İşlem**: ${perf.totalTrades} | **Kazanma Oranı**: %${perf.winRatePercent} | **Net Kâr**: ${perf.netPnlUsd >= 0 ? '+' : ''}$${perf.netPnlUsd}
+
+### 📝 Son İcralardan Çıkarılan Dersler:
+${recentText}
+
+### 💡 Rafine Edilmiş Stratejik Dersler:
+${lessonsText}
+
+*Claude da dahil olmak üzere tüm yapay zeka çekirdeğimiz bu bilgi bankasını her mesajda otomatik okur.*`;
+    }
+
     // 2. Inquiries about trading rationale, leverage, tips, why a position was taken (10x, tüyo, nereden alıp girdin)
     if (
       lower.includes('10x') ||
@@ -654,7 +765,7 @@ Kaptan, sistem hiçbir zaman rastgele tüyolarla veya hislerle işlem açmaz. Po
 3. 💬 **Sosyal İstihbarat**: Telegram ve sosyal sinyal radarları taranarak teyit aranır.
 4. 🧠 **Kural Uyumu Bonusu**: Hafızadaki kurallarla eşleşen sinyallere **+${strongRules[0]?.confidenceBonus || 20} puana varan** güven bonusu eklenir. Sinyal güven skoru **%${config.DECISION_SIGNAL_THRESHOLD}** barajını aştığında otonom işlem açılır.
 
-⚙️ **Kaldıraç Güvenliği**: Kaldıraç oranı risk modelimizce **${config.DEFAULT_LEVERAGE}x - ${config.MAX_LEVERAGE_ALLOWED}x (isolated)** olarak sınırlandırılmıştır ve sermaye koruması için her mikrosaniyelik pozisyon $${config.MICRO_SCALP_STOP_LOSS_USD} stop-loss ile korunur.`;
+⚙️ **Kaldıraç Güvenliği**: Kaldıraç oranı risk modelimizce **${config.DEFAULT_LEVERAGE}x - ${config.MAX_LEVERAGE_ALLOWED}x (isolated)** olarak sınırlandırılmıştır ve sermaye koruması için her pozisyon dinamik %${config.AUTOTRADE_STOP_LOSS_PERCENT} stop-loss ile korunur.`;
     }
 
     // 3. Inquiries about AI models, Claude, Gemini, how to connect LLMs
@@ -718,7 +829,7 @@ ${ruleList}
 Kaptan, portföy durumumuz güncel telemetriye göre şu şekildedir:
 - 🌐 **Mevcut Piyasa Rejimi**: **${regime}**
 - 🛡️ **Devre Kesici Durumu**: ${this.circuitBreaker.getState().isHalted ? '🚨 Soğuma Modunda' : '🟢 Güvenli / Aktif'}
-- 🤖 **Otonom Scalper**: ${this.autoTradeEngine?.isEnabled() ? `Aktif ($${config.MICRO_SCALP_TARGET_USD} hedef kâr)` : 'Pasif'}
+- 🤖 **Otonom İşlem Motoru**: ${this.autoTradeEngine?.isEnabled() ? `Aktif (%${config.AUTOTRADE_TARGET_PROFIT_PERCENT} hedef kâr)` : 'Pasif'}
 
 📊 *Detaylı açık pozisyonlar ve mum grafikleri sağ panelde canlı olarak TradingView üzerinde çizilmektedir.*`;
     }
@@ -731,7 +842,7 @@ Kaptan, portföy durumumuz güncel telemetriye göre şu şekildedir:
 - **Durum**: ${cb.isHalted ? `🚨 SOĞUMADA (${Math.round(cb.remainingSeconds / 60)} dk kaldı)` : '🟢 GÜVENLİ (İşlemler Devam Ediyor)'}
 - **Ardışık Kayıp Sayacı**: ${cb.consecutiveLosses} / ${config.COOLDOWN_CONSECUTIVE_LOSSES} Maksimum
 - **Kaldıraç Koruma Sınırı**: ${config.MAX_LEVERAGE_ALLOWED}x maksimum (Varsayılan: ${config.DEFAULT_LEVERAGE}x isolated)
-- **Mikro-Scalp Savunması**: $${config.MICRO_SCALP_STOP_LOSS_USD} zarar kes stop-loss devrede.
+- **Stop-Loss Savunması**: %${config.AUTOTRADE_STOP_LOSS_PERCENT} dinamik zarar kes stop-loss devrede.
 
 İstediğiniz zaman bana *"Cooldown'ı sıfırla"* diyerek risk sayacını temizleyebilirsiniz.`;
     }
@@ -754,7 +865,7 @@ Rejimi değiştirmek isterseniz *"Piyasa rejimini BEAR yap"* veya *"Boğa rejimi
 Octopus Prime Otonom Zeka Çekirdeği emrinizde. Sizin için arka planda:
 1. **3-Kanallı Sinyal Sentezi**: Mum grafikleri, anlık haber duygu analizi ve sosyal radar verileri birleştiriliyor.
 2. **Kendi Kendine Öğrenme**: Başarılı ve başarısız her işlem \`RuleStore\` üzerinde değerlendirilip kurallar güncelleniyor.
-3. **Mikro-Scalping**: Küçük kâr hedefleri ($${config.MICRO_SCALP_TARGET_USD}) otonom olarak toplanıyor.
+3. **Dinamik Kâr Takibi & İcra**: Trend ve momentum fırsatları (%${config.AUTOTRADE_TARGET_PROFIT_PERCENT} kâr hedefi ve %${config.AUTOTRADE_TRAILING_STOP_PERCENT} trailing stop) otonom olarak icra ediliyor.
 
 Bana öğrenilen kuralları sorabilir, rejim değişikliği yaptırabilir, risk durumunu inceletebilir veya yeni strateji hipotezleri ekletebilirsiniz. Ne yapmak istersiniz?`;
   }

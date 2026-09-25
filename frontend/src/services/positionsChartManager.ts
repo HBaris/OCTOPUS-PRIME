@@ -76,6 +76,11 @@ export class PositionsChartManager {
 
     this.setupEventListeners();
     this.fetchInitialPositions();
+
+    // Periodic live sync fallback (every 2500ms) to ensure cards and PnL never stall
+    setInterval(() => {
+      this.fetchInitialPositions();
+    }, 2500);
   }
 
   private setupEventListeners(): void {

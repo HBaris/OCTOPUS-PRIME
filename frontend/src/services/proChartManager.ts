@@ -46,6 +46,17 @@ export class ProChartManager {
   private currentTimeframe: string = '15m';
   private activePositions: Map<string, any> = new Map();
 
+  // Live Streaming State
+  private formattedCandles: CandlestickData<Time>[] = [];
+  private formattedVol: HistogramData<Time>[] = [];
+  private currentLivePrice: number = 0;
+  private current24hHigh: number = 0;
+  private current24hLow: number = 0;
+  private current24hVol: number = 871313;
+  private currentFirstOpen: number = 0;
+  private liveTickTimer: any = null;
+  private periodicSyncTimer: any = null;
+
   // DOM Elements
   private symbolTitleEl!: HTMLElement;
   private priceValEl!: HTMLElement;
@@ -328,6 +339,7 @@ export class ProChartManager {
 
   public async switchSymbol(symbol: string): Promise<void> {
     if (!symbol) return;
+    this.stopLiveStreaming();
     this.currentSymbol = symbol;
     if (this.symbolTitleEl) this.symbolTitleEl.textContent = symbol;
     if (this.symbolSelectEl && this.symbolSelectEl.value !== symbol) {
@@ -455,21 +467,179 @@ export class ProChartManager {
       const low24h = Math.min(...candles.map((c: any) => c.low));
       const vol24h = candles.reduce((acc: number, c: any) => acc + (c.volume || 0) * c.close, 0);
 
+      // Save state for live streaming
+      this.formattedCandles = formattedCandles;
+      this.formattedVol = formattedVol;
+      this.currentLivePrice = lastCandle.close;
+      this.current24hHigh = high24h;
+      this.current24hLow = low24h;
+      this.current24hVol = vol24h > 0 ? vol24h : 871313;
+      this.currentFirstOpen = firstCandle.open;
+
       this.updateTickerDisplay({
         symbol,
         lastPrice: lastCandle.close,
         change24hPercent: changePct,
         high24h,
         low24h,
-        volume24hUsd: vol24h > 0 ? vol24h : 871313,
+        volume24hUsd: this.current24hVol,
       });
 
       // Update Order Book & Market Trades simulation for selected symbol
       this.renderOrderBookAndTrades(lastCandle.close);
+      this.startLiveStreaming();
 
       this.chartApi.timeScale().fitContent();
     } catch (err) {
       console.warn(`Failed to load chart data for ${symbol}:`, err);
+    }
+  }
+
+  public startLiveStreaming(): void {
+    this.stopLiveStreaming();
+
+    // 1. Fast micro-tick every 1200ms
+    this.liveTickTimer = setInterval(() => {
+      this.tickLive();
+    }, 1200);
+
+    // 2. Periodic sync from backend every 12s
+    this.periodicSyncTimer = setInterval(() => {
+      this.syncLatestCandles();
+    }, 12000);
+  }
+
+  public stopLiveStreaming(): void {
+    if (this.liveTickTimer) {
+      clearInterval(this.liveTickTimer);
+      this.liveTickTimer = null;
+    }
+    if (this.periodicSyncTimer) {
+      clearInterval(this.periodicSyncTimer);
+      this.periodicSyncTimer = null;
+    }
+  }
+
+  private tickLive(): void {
+    if (this.formattedCandles.length === 0 || !this.currentLivePrice) return;
+
+    // Micro-volatility walk (±0.04% to ±0.08%)
+    const deltaPercent = (Math.random() - 0.49) * 0.0007;
+    const isUp = deltaPercent >= 0;
+    const newPrice = Math.max(0.000001, this.currentLivePrice * (1 + deltaPercent));
+    this.currentLivePrice = newPrice;
+
+    // 1. Update active candle on chart
+    const lastCandle = this.formattedCandles[this.formattedCandles.length - 1];
+    lastCandle.close = newPrice;
+    if (newPrice > lastCandle.high) {
+      lastCandle.high = newPrice;
+      if (newPrice > this.current24hHigh) this.current24hHigh = newPrice;
+    }
+    if (newPrice < lastCandle.low) {
+      lastCandle.low = newPrice;
+      if (newPrice < this.current24hLow) this.current24hLow = newPrice;
+    }
+    this.candleSeries.update(lastCandle);
+
+    // 2. Update volume histogram
+    const lastVol = this.formattedVol[this.formattedVol.length - 1];
+    if (lastVol) {
+      lastVol.value += Math.round(Math.random() * 25 + 5);
+      lastVol.color = lastCandle.close >= lastCandle.open ? 'rgba(16, 185, 129, 0.45)' : 'rgba(239, 68, 68, 0.45)';
+      this.volumeSeries.update(lastVol);
+      const volEl = document.getElementById('vol-val');
+      if (volEl) volEl.textContent = `${Math.round(lastVol.value).toLocaleString()}`;
+    }
+
+    // 3. Update Ticker display with flash
+    const changePct = ((newPrice - this.currentFirstOpen) / this.currentFirstOpen) * 100;
+    this.updateTickerDisplay({
+      symbol: this.currentSymbol,
+      lastPrice: newPrice,
+      change24hPercent: changePct,
+      high24h: this.current24hHigh,
+      low24h: this.current24hLow,
+      volume24hUsd: this.current24hVol + Math.round(newPrice * 10),
+    });
+
+    // 4. Update Order Book Depth
+    this.renderLiveOrderBook(newPrice);
+
+    // 5. Append trade to Market Trades list
+    this.appendLiveTrade(newPrice, isUp);
+  }
+
+  private async syncLatestCandles(): Promise<void> {
+    try {
+      const candles = await apiService.fetchCandles(this.currentSymbol, this.currentTimeframe);
+      if (candles && Array.isArray(candles) && candles.length > 0) {
+        const last = candles[candles.length - 1];
+        if (last && last.close && Math.abs(last.close - this.currentLivePrice) / this.currentLivePrice > 0.005) {
+          this.currentLivePrice = last.close;
+        }
+      }
+    } catch {
+      // Keep running live simulation smoothly if server is temporarily unreachable
+    }
+  }
+
+  private renderLiveOrderBook(midPrice: number): void {
+    if (!this.orderBookAsksEl || !this.orderBookBidsEl) return;
+
+    // Asks (Red)
+    let asksHtml = '';
+    for (let i = 5; i >= 1; i--) {
+      const p = midPrice * (1 + i * 0.00035 + (Math.random() - 0.5) * 0.0001);
+      const qty = Math.floor(Math.random() * 6000 + 400);
+      const total = (p * qty).toFixed(1);
+      asksHtml += `<div class="ob-row ask-row">
+        <span class="ob-price text-red">$${p < 1 ? p.toFixed(5) : p.toFixed(2)}</span>
+        <span class="ob-qty">${qty}</span>
+        <span class="ob-total">$${total}</span>
+      </div>`;
+    }
+    this.orderBookAsksEl.innerHTML = asksHtml;
+
+    // Mid price
+    const midEl = document.getElementById('pro-ob-mid-price');
+    if (midEl) {
+      midEl.textContent = `$${midPrice < 1 ? midPrice.toFixed(5) : midPrice.toFixed(2)}`;
+    }
+
+    // Bids (Green)
+    let bidsHtml = '';
+    for (let i = 1; i <= 5; i++) {
+      const p = midPrice * (1 - i * 0.00035 + (Math.random() - 0.5) * 0.0001);
+      const qty = Math.floor(Math.random() * 6000 + 400);
+      const total = (p * qty).toFixed(1);
+      bidsHtml += `<div class="ob-row bid-row">
+        <span class="ob-price text-green">$${p < 1 ? p.toFixed(5) : p.toFixed(2)}</span>
+        <span class="ob-qty">${qty}</span>
+        <span class="ob-total">$${total}</span>
+      </div>`;
+    }
+    this.orderBookBidsEl.innerHTML = bidsHtml;
+  }
+
+  private appendLiveTrade(price: number, isBuy: boolean): void {
+    if (!this.marketTradesListEl) return;
+
+    const now = new Date();
+    const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+    const qty = Math.floor(Math.random() * 3500 + 150);
+
+    const row = document.createElement('div');
+    row.className = `trade-row ${isBuy ? 'trade-buy' : 'trade-sell'} trade-flash`;
+    row.innerHTML = `
+      <span class="trade-price">${price < 1 ? price.toFixed(5) : price.toFixed(2)}</span>
+      <span class="trade-qty">${qty}</span>
+      <span class="trade-time">${timeStr}</span>
+    `;
+
+    this.marketTradesListEl.insertBefore(row, this.marketTradesListEl.firstChild);
+    while (this.marketTradesListEl.children.length > 12) {
+      this.marketTradesListEl.removeChild(this.marketTradesListEl.lastChild!);
     }
   }
 
@@ -504,41 +674,9 @@ export class ProChartManager {
   }
 
   private renderOrderBookAndTrades(basePrice: number): void {
-    if (!this.orderBookAsksEl || !this.orderBookBidsEl || !this.marketTradesListEl) return;
+    this.renderLiveOrderBook(basePrice);
+    if (!this.marketTradesListEl) return;
 
-    // Generate 6 Ask depth rows
-    let asksHtml = '';
-    for (let i = 6; i >= 1; i--) {
-      const p = basePrice * (1 + i * 0.0004);
-      const qty = Math.floor(Math.random() * 8000 + 500);
-      const total = (p * qty).toFixed(1);
-      asksHtml += `<div class="ob-row ask-row">
-        <span class="ob-price text-red">$${p < 1 ? p.toFixed(5) : p.toFixed(2)}</span>
-        <span class="ob-qty">${qty}</span>
-        <span class="ob-total">$${total}</span>
-      </div>`;
-    }
-    this.orderBookAsksEl.innerHTML = asksHtml;
-
-    // Mid price
-    const midEl = document.getElementById('pro-ob-mid-price');
-    if (midEl) midEl.textContent = `$${basePrice < 1 ? basePrice.toFixed(5) : basePrice.toFixed(2)}`;
-
-    // Generate 6 Bid depth rows
-    let bidsHtml = '';
-    for (let i = 1; i <= 6; i++) {
-      const p = basePrice * (1 - i * 0.0004);
-      const qty = Math.floor(Math.random() * 8000 + 500);
-      const total = (p * qty).toFixed(1);
-      bidsHtml += `<div class="ob-row bid-row">
-        <span class="ob-price text-green">$${p < 1 ? p.toFixed(5) : p.toFixed(2)}</span>
-        <span class="ob-qty">${qty}</span>
-        <span class="ob-total">$${total}</span>
-      </div>`;
-    }
-    this.orderBookBidsEl.innerHTML = bidsHtml;
-
-    // Generate Market Trades Feed
     let tradesHtml = '';
     const now = new Date();
     for (let i = 0; i < 8; i++) {

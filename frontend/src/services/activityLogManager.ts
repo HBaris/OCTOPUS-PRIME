@@ -200,9 +200,9 @@ export class ActivityLogManager {
           <span>🧠 AI ASİSTAN</span>
         </button>
 
-        <button id="btn-toggle-autotrade" class="hdr-action-btn btn-autotrade active" title="Otonom Pasif Gelir & Mikro-Scalping Modu">
+        <button id="btn-toggle-autotrade" class="hdr-action-btn btn-autotrade active" title="Otonom Trend & Momentum Motoru">
           <span class="autotrade-pulse"></span>
-          <span id="autotrade-text">🤖 OTO-TRADE: AKTİF ($0.30)</span>
+          <span id="autotrade-text">🤖 OTO-TRADE: AKTİF (%2.5)</span>
         </button>
 
         <button id="btn-toggle-logs" class="hdr-action-btn btn-log" title="Ajan & İşlem Log Kayıtlarını Görüntüle">
@@ -245,8 +245,8 @@ export class ActivityLogManager {
 
         if (autoTradeActive) {
           autoTradeBtn.className = 'hdr-action-btn btn-autotrade active';
-          if (autoTradeText) autoTradeText.textContent = '🤖 OTO-TRADE: AKTİF ($0.30)';
-          this.addLog('TRADE', 'Otonom Pasif Gelir Modu Açıldı', 'Kullanıcı onayı gerekmeksizin altcoin mikro-scalp alım/satımları aktif.', 'Kullanıcı');
+          if (autoTradeText) autoTradeText.textContent = '🤖 OTO-TRADE: AKTİF (%2.5)';
+          this.addLog('TRADE', 'Otonom Trend & Momentum Modu Açıldı', 'Kullanıcı onayı gerekmeksizin dinamik trend/momentum alım-satımları aktif.', 'Kullanıcı');
         } else {
           autoTradeBtn.className = 'hdr-action-btn btn-autotrade paused';
           if (autoTradeText) autoTradeText.textContent = '⏸️ OTO-TRADE: DURAKLATILDI';
